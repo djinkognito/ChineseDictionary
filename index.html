@@ -1,0 +1,156 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chinese Dictionary</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .search-container {
+            margin-bottom: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        #searchInput {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        #searchInput:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        .result-item {
+            background: white;
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .hanzi {
+            font-size: 28px;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        .pinyin {
+            color: #666;
+            margin-bottom: 8px;
+            font-size: 18px;
+        }
+        .english {
+            margin-bottom: 12px;
+            font-size: 16px;
+            color: #444;
+        }
+        .example {
+            color: #666;
+            font-style: italic;
+            border-left: 3px solid #4CAF50;
+            padding-left: 10px;
+            margin-top: 10px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .no-results {
+            text-align: center;
+            color: #666;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Chinese Dictionary</h1>
+    <div class="search-container">
+        <input type="text" 
+               id="searchInput" 
+               placeholder="Search in Hanzi, Pinyin, or English..."
+               autocomplete="off">
+    </div>
+    <div id="results"></div>
+    <script>
+        // Configuration
+        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTa_ES9bk_ye4K094l7cTTTrI13UiqAqvS5wCjW1XRNXaOLBYx3zrYqBP6Cv49KLOTBxo_WumZ232he/pub?output=csv';
+        let dictionary = [];
+        // Load dictionary data
+        async function loadDictionary() {
+            try {
+                const response = await fetch(SHEET_URL);
+                const csvText = await response.text();
+                dictionary = parseCSV(csvText);
+                console.log('Dictionary loaded:', dictionary.length, 'entries');
+            } catch (error) {
+                console.error('Error loading dictionary:', error);
+                document.getElementById('results').innerHTML = 
+                    '<div class="no-results">Error loading dictionary. Please check your connection.</div>';
+            }
+        }
+        // Parse CSV data
+        function parseCSV(csv) {
+            const lines = csv.split('\n');
+            const headers = lines[0].split(',');
+            return lines.slice(1)
+                .filter(line => line.trim())
+                .map(line => {
+                    const values = line.split(',').map(val => val.trim());
+                    return {
+                        hanzi: values[0] || '',
+                        pinyin: values[1] || '',
+                        english: values[2] || '',
+                        example: values[3] || ''
+                    };
+                });
+        }
+        // Search function
+        function search(query) {
+            query = query.toLowerCase().trim();
+            if (!query) return [];
+            
+            return dictionary.filter(entry => 
+                entry.hanzi.includes(query) ||
+                entry.pinyin.toLowerCase().includes(query) ||
+                entry.english.toLowerCase().includes(query)
+            );
+        }
+        // Display results
+        function displayResults(results) {
+            const resultsDiv = document.getElementById('results');
+            
+            if (results.length === 0) {
+                resultsDiv.innerHTML = '<div class="no-results">No matches found.</div>';
+                return;
+            }
+            resultsDiv.innerHTML = results.map(entry => `
+                <div class="result-item">
+                    <div class="hanzi">${entry.hanzi}</div>
+                    <div class="pinyin">${entry.pinyin}</div>
+                    <div class="english">${entry.english}</div>
+                    ${entry.example ? `<div class="example">${entry.example}</div>` : ''}
+                </div>
+            `).join('');
+        }
+        // Event listener for search input
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const query = e.target.value;
+            const results = search(query);
+            displayResults(results);
+        });
+        // Initialize
+        loadDictionary();
+    </script>
+</body>
+</html>
