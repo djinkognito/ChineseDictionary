@@ -108,7 +108,7 @@
     <input
       type="text"
       id="searchInput"
-      placeholder="Search in Hanzi, Pinyin, or English..."
+      placeholder="Type to search (Hanzi, Pinyin, or English)..."
       autocomplete="off"
     />
   </div>
@@ -125,6 +125,8 @@
 
     async function loadDictionary() {
       const statusEl = document.getElementById("status");
+      const resultsEl = document.getElementById("results");
+
       try {
         const response = await fetch(SHEET_URL, { cache: "no-store" });
         if (!response.ok) {
@@ -135,7 +137,7 @@
         dictionary = parseCSV(csvText).map(normalizeEntry);
 
         statusEl.textContent = `Loaded ${dictionary.length} entries.`;
-        displayResults(dictionary.slice(0, 50), dictionary.length, true);
+        resultsEl.innerHTML = '<div class="no-results">Start typing to search.</div>';
       } catch (error) {
         console.error("Error loading dictionary:", error);
         statusEl.textContent = "Error loading dictionary. Please check your sheet URL or connection.";
@@ -184,9 +186,11 @@
         } else if ((char === "\n" || char === "\r") && !inQuotes) {
           if (char === "\r" && nextChar === "\n") i++;
           row.push(value);
+
           if (row.some(cell => cell.trim() !== "")) {
             rows.push(row);
           }
+
           row = [];
           value = "";
         } else {
@@ -248,7 +252,7 @@
 
     function search(rawQuery) {
       const query = rawQuery.trim();
-      if (!query) return dictionary.slice(0, 50);
+      if (!query) return [];
 
       return dictionary
         .map(entry => ({
@@ -290,15 +294,22 @@
       return card;
     }
 
-    function displayResults(results, totalMatches = results.length, initialLoad = false) {
+    function displayResults(results) {
       const resultsDiv = document.getElementById("results");
       const resultsCount = document.getElementById("resultsCount");
       const statusEl = document.getElementById("status");
+      const searchValue = document.getElementById("searchInput").value.trim();
 
       resultsDiv.innerHTML = "";
 
       if (dictionary.length > 0) {
         statusEl.textContent = "";
+      }
+
+      if (!searchValue) {
+        resultsCount.textContent = "";
+        resultsDiv.innerHTML = '<div class="no-results">Start typing to search.</div>';
+        return;
       }
 
       if (results.length === 0) {
@@ -307,11 +318,7 @@
         return;
       }
 
-      if (initialLoad) {
-        resultsCount.textContent = `Showing first ${results.length} of ${dictionary.length} entries. Start typing to search.`;
-      } else {
-        resultsCount.textContent = `${totalMatches} match${totalMatches === 1 ? "" : "es"} found.`;
-      }
+      resultsCount.textContent = `${results.length} match${results.length === 1 ? "" : "es"} found.`;
 
       const fragment = document.createDocumentFragment();
       results.forEach(entry => fragment.appendChild(createResultCard(entry)));
@@ -329,7 +336,7 @@
     const handleSearch = debounce((event) => {
       const query = event.target.value;
       const results = search(query);
-      displayResults(results, results.length, false);
+      displayResults(results);
     }, 120);
 
     document.getElementById("searchInput").addEventListener("input", handleSearch);
