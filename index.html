@@ -117,6 +117,8 @@
             align-items: center;
             justify-content: center;
             text-align: center;
+            cursor: pointer;
+            user-select: none;
         }
 
         .card-front {
@@ -125,10 +127,34 @@
         }
 
         .card-back {
+            display: none;
+        }
+
+        .card-back-hanzi {
+            font-size: 42px;
+            color: #222;
+            margin-bottom: 10px;
+        }
+
+        .card-back-pinyin {
+            font-size: 22px;
+            color: #666;
+            margin-bottom: 14px;
+        }
+
+        .card-back-english {
             font-size: 22px;
             color: #444;
+            line-height: 1.5;
+            margin-bottom: 14px;
             white-space: pre-wrap;
+        }
+
+        .card-back-example {
+            font-size: 18px;
+            color: #666;
             line-height: 1.6;
+            white-space: pre-wrap;
         }
     </style>
 </head>
@@ -155,14 +181,18 @@
     <div id="flashcardSection" style="display: none;">
         <div class="flashcard-controls">
             <button id="prevCardBtn">Previous</button>
-            <button id="showAnswerBtn">Show Answer</button>
             <button id="nextCardBtn">Next</button>
-            <button id="shuffleCardsBtn">Shuffle</button>
         </div>
 
         <div class="flashcard">
             <div id="cardFront" class="card-front">Loading...</div>
-            <div id="cardBack" class="card-back" style="display: none;"></div>
+
+            <div id="cardBack" class="card-back">
+                <div id="cardBackHanzi" class="card-back-hanzi"></div>
+                <div id="cardBackPinyin" class="card-back-pinyin"></div>
+                <div id="cardBackEnglish" class="card-back-english"></div>
+                <div id="cardBackExample" class="card-back-example"></div>
+            </div>
         </div>
     </div>
 
@@ -172,6 +202,7 @@
         let dictionary = [];
         let flashcards = [];
         let currentCardIndex = 0;
+        let answerShown = false;
 
         async function loadDictionary() {
             try {
@@ -180,6 +211,7 @@
                 dictionary = parseCSV(csvText);
 
                 buildFlashcardsFromDictionary();
+                shuffleArray(flashcards);
                 showCard(0);
 
                 console.log('Dictionary loaded:', dictionary.length, 'entries');
@@ -244,27 +276,40 @@
 
         function buildFlashcardsFromDictionary() {
             flashcards = dictionary.map(entry => ({
-                front: entry.hanzi || '',
-                back:
-                    (entry.pinyin || '') +
-                    ((entry.pinyin && entry.english) ? '\n' : '') +
-                    (entry.english || '') +
-                    (entry.example ? '\n\n' + entry.example : '')
-            })).filter(card => card.front || card.back);
+                hanzi: entry.hanzi || '',
+                pinyin: entry.pinyin || '',
+                english: entry.english || '',
+                example: entry.example || ''
+            })).filter(card => card.hanzi || card.pinyin || card.english || card.example);
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
         }
 
         function showCard(index) {
             if (!flashcards.length) {
                 document.getElementById('cardFront').textContent = 'No flashcards available.';
-                document.getElementById('cardBack').textContent = '';
+                document.getElementById('cardBackHanzi').textContent = '';
+                document.getElementById('cardBackPinyin').textContent = '';
+                document.getElementById('cardBackEnglish').textContent = '';
+                document.getElementById('cardBackExample').textContent = '';
                 return;
             }
 
             currentCardIndex = index;
+            answerShown = false;
+
             const card = flashcards[currentCardIndex];
 
-            document.getElementById('cardFront').textContent = card.front;
-            document.getElementById('cardBack').textContent = card.back;
+            document.getElementById('cardFront').textContent = card.hanzi;
+            document.getElementById('cardBackHanzi').textContent = card.hanzi;
+            document.getElementById('cardBackPinyin').textContent = card.pinyin;
+            document.getElementById('cardBackEnglish').textContent = card.english;
+            document.getElementById('cardBackExample').textContent = card.example;
 
             document.getElementById('cardFront').style.display = 'block';
             document.getElementById('cardBack').style.display = 'none';
@@ -272,6 +317,9 @@
 
         function showAnswer() {
             if (!flashcards.length) return;
+
+            answerShown = true;
+            document.getElementById('cardFront').style.display = 'none';
             document.getElementById('cardBack').style.display = 'block';
         }
 
@@ -287,24 +335,14 @@
             showCard(currentCardIndex);
         }
 
-        function shuffleFlashcards() {
-            for (let i = flashcards.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [flashcards[i], flashcards[j]] = [flashcards[j], flashcards[i]];
-            }
-            showCard(0);
-        }
-
         document.getElementById('searchInput').addEventListener('input', (e) => {
             const query = e.target.value;
             const results = search(query);
             displayResults(results);
         });
 
-        document.getElementById('showAnswerBtn').addEventListener('click', showAnswer);
         document.getElementById('nextCardBtn').addEventListener('click', nextCard);
         document.getElementById('prevCardBtn').addEventListener('click', prevCard);
-        document.getElementById('shuffleCardsBtn').addEventListener('click', shuffleFlashcards);
 
         document.getElementById('dictionaryModeBtn').addEventListener('click', () => {
             document.getElementById('dictionarySection').style.display = 'block';
@@ -314,6 +352,43 @@
         document.getElementById('flashcardModeBtn').addEventListener('click', () => {
             document.getElementById('dictionarySection').style.display = 'none';
             document.getElementById('flashcardSection').style.display = 'block';
+        });
+
+        document.querySelector('.flashcard').addEventListener('click', () => {
+            if (!flashcards.length) return;
+
+            if (!answerShown) {
+                showAnswer();
+            } else {
+                nextCard();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            const flashcardVisible = document.getElementById('flashcardSection').style.display !== 'none';
+            if (!flashcardVisible) return;
+
+            if (document.activeElement.tagName === 'INPUT') return;
+
+            if (e.code === 'Space') {
+                e.preventDefault();
+
+                if (!answerShown) {
+                    showAnswer();
+                } else {
+                    nextCard();
+                }
+            }
+
+            if (e.code === 'ArrowRight') {
+                e.preventDefault();
+                nextCard();
+            }
+
+            if (e.code === 'ArrowLeft') {
+                e.preventDefault();
+                prevCard();
+            }
         });
 
         loadDictionary();
