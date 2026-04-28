@@ -7,7 +7,7 @@
 
 <style>
 body {
-    font-family: "Segoe UI", -apple-system, sans-serif;
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
     max-width: 900px;
     margin: 0 auto;
     padding: 30px 20px;
@@ -125,7 +125,7 @@ h1 {
 .flashcard {
     background: white;
     border-radius: 12px;
-    min-height: 260px;
+    min-height: 360px;
     padding: 35px;
     display: flex;
     align-items: center;
@@ -137,8 +137,11 @@ h1 {
 }
 
 .card-front {
-    font-size: 46px;
-    color: #222;
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+    font-size: 110px;
+    font-weight: 900;
+    color: #007bff;
+    line-height: 1.1;
 }
 
 .card-back {
@@ -146,22 +149,27 @@ h1 {
 }
 
 .card-back-hanzi {
-    font-size: 46px;
-    color: #222;
-    margin-bottom: 10px;
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+    font-size: 110px;
+    font-weight: 900;
+    color: #007bff;
+    line-height: 1.1;
+    margin-bottom: 12px;
 }
 
 .card-back-pinyin {
-    font-size: 24px;
+    font-size: 30px;
     color: #666;
-    margin-bottom: 14px;
+    margin-bottom: 18px;
+    font-weight: 600;
 }
 
 .card-back-english {
-    font-size: 24px;
-    color: #444;
-    line-height: 1.5;
+    font-size: 34px;
+    color: #333;
+    line-height: 1.4;
     margin-bottom: 14px;
+    font-weight: 700;
     white-space: pre-wrap;
 }
 
@@ -377,9 +385,7 @@ function buildSession() {
 
 function enterUnsuspendMode() {
     mode = "unsuspend";
-
     sessionCards = allCards.filter(c => srs[c.id]?.suspended);
-
     index = 0;
     show(0);
 }
