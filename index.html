@@ -1,534 +1,698 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chinese Dictionary</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #0b0826;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chinese Dictionary</title>
 
-        h1 {
-            color: white;
-            text-align: center;
-            margin-bottom: 30px;
-        }
+<style>
+body {
+    font-family: Arial, sans-serif;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #0b0826;
+}
 
-        .mode-buttons {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
+h1 {
+    color: white;
+    text-align: center;
+    margin-bottom: 30px;
+}
 
-        .mode-buttons button,
-        .flashcard-controls button,
-        .srs-buttons button {
-            padding: 10px 14px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            background: white;
-            font-size: 14px;
-        }
+.mode-buttons,
+.flashcard-controls,
+.srs-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
 
-        .search-container {
-            margin-bottom: 20px;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(11,8,38,1.0);
-        }
+button {
+    padding: 10px 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background: white;
+    font-size: 14px;
+}
 
-        #searchInput {
-            width: 100%;
-            padding: 12px;
-            font-size: 16px;
-            border: 2px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
+.search-container {
+    margin-bottom: 20px;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+}
 
-        #searchInput:focus {
-            outline: none;
-            border-color: #0b0826;
-        }
+#searchInput {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
 
-        .result-item {
-            background: white;
-            border: 1px solid #ddd;
-            margin: 10px 0;
-            padding: 20px;
-            border-radius: 8px;
-        }
+.result-item {
+    background: white;
+    border: 1px solid #ddd;
+    margin: 10px 0;
+    padding: 20px;
+    border-radius: 8px;
+}
 
-        .hanzi {
-            font-size: 28px;
-            margin-bottom: 8px;
-            color: #333;
-        }
+.hanzi {
+    font-size: 28px;
+    margin-bottom: 8px;
+    color: #333;
+}
 
-        .pinyin {
-            color: #666;
-            margin-bottom: 8px;
-            font-size: 18px;
-        }
+.pinyin {
+    color: #666;
+    margin-bottom: 8px;
+    font-size: 18px;
+}
 
-        .english {
-            margin-bottom: 12px;
-            font-size: 16px;
-            color: #444;
-        }
+.english {
+    margin-bottom: 12px;
+    font-size: 16px;
+    color: #444;
+}
 
-        .example {
-            color: #666;
-            font-style: italic;
-            border-left: 3px solid #4CAF50;
-            padding-left: 10px;
-            margin-top: 10px;
-            white-space: pre-wrap;
-        }
+.example {
+    color: #666;
+    font-style: italic;
+    border-left: 3px solid #4CAF50;
+    padding-left: 10px;
+    margin-top: 10px;
+    white-space: pre-wrap;
+}
 
-        .no-results {
-            text-align: center;
-            color: white;
-            padding: 20px;
-        }
+.no-results {
+    text-align: center;
+    color: white;
+    padding: 20px;
+}
 
-        .flashcard-controls,
-        .srs-buttons {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-bottom: 20px;
-        }
+.flashcard-status {
+    color: white;
+    margin-bottom: 12px;
+    font-size: 14px;
+}
 
-        .flashcard-status {
-            color: white;
-            margin-bottom: 12px;
-            font-size: 14px;
-        }
+.flashcard {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    min-height: 260px;
+    padding: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+}
 
-        .flashcard {
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            min-height: 260px;
-            padding: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            cursor: pointer;
-            user-select: none;
-        }
+.card-front {
+    font-size: 42px;
+    color: #222;
+}
 
-        .card-front {
-            font-size: 42px;
-            color: #222;
-        }
+.card-back {
+    display: none;
+}
 
-        .card-back {
-            display: none;
-        }
+.card-back-hanzi {
+    font-size: 42px;
+    color: #222;
+    margin-bottom: 10px;
+}
 
-        .card-back-hanzi {
-            font-size: 42px;
-            color: #222;
-            margin-bottom: 10px;
-        }
+.card-back-pinyin {
+    font-size: 22px;
+    color: #666;
+    margin-bottom: 14px;
+}
 
-        .card-back-pinyin {
-            font-size: 22px;
-            color: #666;
-            margin-bottom: 14px;
-        }
+.card-back-english {
+    font-size: 22px;
+    color: #444;
+    line-height: 1.5;
+    margin-bottom: 14px;
+    white-space: pre-wrap;
+}
 
-        .card-back-english {
-            font-size: 22px;
-            color: #444;
-            line-height: 1.5;
-            margin-bottom: 14px;
-            white-space: pre-wrap;
-        }
-
-        .card-back-example {
-            font-size: 18px;
-            color: #666;
-            line-height: 1.6;
-            white-space: pre-wrap;
-        }
-    </style>
+.card-back-example {
+    font-size: 18px;
+    color: #666;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+</style>
 </head>
+
 <body>
-    <h1>Chinese Dictionary</h1>
 
-    <div class="mode-buttons">
-        <button id="dictionaryModeBtn">Dictionary</button>
-        <button id="flashcardModeBtn">Flashcards</button>
+<h1>Chinese Dictionary</h1>
+
+<div class="mode-buttons">
+    <button id="dictionaryModeBtn">Dictionary</button>
+    <button id="flashcardModeBtn">Flashcards</button>
+    <button id="unsuspendModeBtn">Unsuspend Cards</button>
+</div>
+
+<div id="dictionarySection">
+    <div class="search-container">
+        <input type="text"
+               id="searchInput"
+               placeholder="Type to search (Hanzi, Pinyin, or English)..."
+               autocomplete="off">
+    </div>
+    <div id="results">
+        <div class="no-results">Loading dictionary...</div>
+    </div>
+</div>
+
+<div id="flashcardSection" style="display:none;">
+
+    <div class="flashcard-controls">
+        <button id="prevCardBtn">Previous</button>
+        <button id="nextCardBtn">Next</button>
+        <button id="resetSrsBtn">Reset SRS Progress</button>
     </div>
 
-    <div id="dictionarySection">
-        <div class="search-container">
-            <input type="text"
-                   id="searchInput"
-                   placeholder="Type to search (Hanzi, Pinyin, or English)..."
-                   autocomplete="off">
-        </div>
-        <div id="results">
-            <div class="no-results">Loading dictionary...</div>
-        </div>
-    </div>
+    <div id="flashcardStatus" class="flashcard-status"></div>
 
-    <div id="flashcardSection" style="display: none;">
-        <div class="flashcard-controls">
-            <button id="prevCardBtn">Previous</button>
-            <button id="nextCardBtn">Next</button>
-            <button id="resetSrsBtn">Reset SRS Progress</button>
-        </div>
+    <div class="flashcard">
+        <div id="cardFront" class="card-front">Loading...</div>
 
-        <div id="flashcardStatus" class="flashcard-status"></div>
-
-        <div class="flashcard">
-            <div id="cardFront" class="card-front">Loading...</div>
-
-            <div id="cardBack" class="card-back">
-                <div id="cardBackHanzi" class="card-back-hanzi"></div>
-                <div id="cardBackPinyin" class="card-back-pinyin"></div>
-                <div id="cardBackEnglish" class="card-back-english"></div>
-                <div id="cardBackExample" class="card-back-example"></div>
-            </div>
-        </div>
-
-        <div class="srs-buttons" id="srsButtons" style="display: none; margin-top: 20px;">
-            <button onclick="rateCard('again')">Again</button>
-            <button onclick="rateCard('good')">Good</button>
-            <button onclick="rateCard('easy')">Easy</button>
+        <div id="cardBack" class="card-back">
+            <div id="cardBackHanzi" class="card-back-hanzi"></div>
+            <div id="cardBackPinyin" class="card-back-pinyin"></div>
+            <div id="cardBackEnglish" class="card-back-english"></div>
+            <div id="cardBackExample" class="card-back-example"></div>
         </div>
     </div>
 
-    <script>
-        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTa_ES9bk_ye4K094l7cTTTrI13UiqAqvS5wCjW1XRNXaOLBYx3zrYqBP6Cv49KLOTBxo_WumZ232he/pub?output=csv';
+    <div class="srs-buttons" id="srsButtons" style="display:none; margin-top:20px;">
+        <button onclick="rateCard('again')">Again</button>
+        <button onclick="rateCard('good')">Good</button>
+        <button onclick="rateCard('easy')">Easy</button>
+        <button onclick="buryCard()">Bury Today</button>
+        <button onclick="suspendCard()">Never Show Again</button>
+    </div>
 
-        let dictionary = [];
-        let allFlashcards = [];
-        let flashcards = [];
-        let currentCardIndex = 0;
-        let answerShown = false;
+    <div class="srs-buttons" id="unsuspendButtons" style="display:none; margin-top:20px;">
+        <button onclick="unsuspendCard()">Unsuspend This Card</button>
+        <button onclick="nextCard()">Skip</button>
+    </div>
 
-        let srsData = JSON.parse(localStorage.getItem("srsData") || "{}");
+</div>
 
-        async function loadDictionary() {
-            try {
-                const response = await fetch(SHEET_URL);
-                const csvText = await response.text();
-                dictionary = parseCSV(csvText);
+<script>
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTa_ES9bk_ye4K094l7cTTTrI13UiqAqvS5wCjW1XRNXaOLBYx3zrYqBP6Cv49KLOTBxo_WumZ232he/pub?output=csv';
 
-                buildFlashcardsFromDictionary();
-                buildDueFlashcardQueue();
-                showCard(0);
+const NEW_CARDS_PER_SESSION = 20;
+const REVIEW_CARDS_PER_SESSION = 50;
 
-                console.log('Dictionary loaded:', dictionary.length, 'entries');
-                document.getElementById('results').innerHTML =
-                    '<div class="no-results">Start typing to search.</div>';
-            } catch (error) {
-                console.error('Error loading dictionary:', error);
-                document.getElementById('results').innerHTML =
-                    '<div class="no-results">Error loading dictionary. Please check your connection.</div>';
-            }
-        }
+let dictionary = [];
+let allFlashcards = [];
+let flashcards = [];
+let currentCardIndex = 0;
+let answerShown = false;
+let currentMode = "review";
 
-        function parseCSV(csv) {
-            const lines = csv.split('\n');
-            return lines.slice(1)
-                .filter(line => line.trim())
-                .map(line => {
-                    const values = line.split(',').map(val => val.trim());
-                    return {
-                        hanzi: values[0] || '',
-                        pinyin: values[1] || '',
-                        english: values[2] || '',
-                        example: values[3] || ''
-                    };
-                });
-        }
+let srsData = JSON.parse(localStorage.getItem("srsData") || "{}");
 
-        function search(query) {
-            query = query.toLowerCase().trim();
-            if (!query) return [];
+async function loadDictionary() {
+    try {
+        const response = await fetch(SHEET_URL);
+        const csvText = await response.text();
+        dictionary = parseCSV(csvText);
 
-            return dictionary.filter(entry =>
-                entry.hanzi.includes(query) ||
-                entry.pinyin.toLowerCase().includes(query) ||
-                entry.english.toLowerCase().includes(query)
-            );
-        }
+        buildFlashcardsFromDictionary();
+        buildDueFlashcardQueue();
+        showCard(0);
 
-        function displayResults(results) {
-            const resultsDiv = document.getElementById('results');
-            const currentQuery = document.getElementById('searchInput').value.trim();
+        document.getElementById('results').innerHTML =
+            '<div class="no-results">Start typing to search.</div>';
+    } catch (error) {
+        console.error('Error loading dictionary:', error);
+        document.getElementById('results').innerHTML =
+            '<div class="no-results">Error loading dictionary.</div>';
+    }
+}
 
-            if (!currentQuery) {
-                resultsDiv.innerHTML = '<div class="no-results">Start typing to search.</div>';
-                return;
-            }
+function parseCSV(csv) {
+    const lines = csv.split('\n');
 
-            if (results.length === 0) {
-                resultsDiv.innerHTML = '<div class="no-results">No matches found.</div>';
-                return;
-            }
-
-            resultsDiv.innerHTML = results.map(entry => `
-                <div class="result-item">
-                    <div class="hanzi">${entry.hanzi}</div>
-                    <div class="pinyin">${entry.pinyin}</div>
-                    <div class="english">${entry.english}</div>
-                    ${entry.example ? `<div class="example">${entry.example}</div>` : ''}
-                </div>
-            `).join('');
-        }
-
-        function buildFlashcardsFromDictionary() {
-            allFlashcards = dictionary.map((entry, index) => ({
-                id: index.toString(),
-                hanzi: entry.hanzi || '',
-                pinyin: entry.pinyin || '',
-                english: entry.english || '',
-                example: entry.example || ''
-            })).filter(card => card.hanzi || card.pinyin || card.english || card.example);
-        }
-
-        function buildDueFlashcardQueue() {
-            flashcards = getDueCards(allFlashcards);
-
-            if (flashcards.length === 0) {
-                flashcards = allFlashcards.slice();
-            }
-
-            shuffleArray(flashcards);
-            currentCardIndex = 0;
-            updateFlashcardStatus();
-        }
-
-        function getDueCards(cards) {
-            const today = new Date().toISOString().split("T")[0];
-
-            return cards.filter(card => {
-                const srs = srsData[card.id];
-                return !srs || !srs.due || srs.due <= today;
-            });
-        }
-
-        function updateSRS(cardId, rating) {
-            let data = srsData[cardId] || {
-                interval: 1,
-                ease: 2.5,
-                reviews: 0
+    return lines.slice(1)
+        .filter(line => line.trim())
+        .map(line => {
+            const values = line.split(',').map(val => val.trim());
+            return {
+                hanzi: values[0] || '',
+                pinyin: values[1] || '',
+                english: values[2] || '',
+                example: values[3] || ''
             };
-
-            if (rating === "again") {
-                data.interval = 1;
-                data.ease = Math.max(1.3, data.ease - 0.2);
-            }
-
-            if (rating === "good") {
-                data.interval = Math.max(1, Math.round(data.interval * data.ease));
-            }
-
-            if (rating === "easy") {
-                data.ease += 0.15;
-                data.interval = Math.max(2, Math.round(data.interval * data.ease * 1.3));
-            }
-
-            const today = new Date();
-            today.setDate(today.getDate() + data.interval);
-
-            data.due = today.toISOString().split("T")[0];
-            data.lastReviewed = new Date().toISOString().split("T")[0];
-            data.reviews = (data.reviews || 0) + 1;
-
-            srsData[cardId] = data;
-            localStorage.setItem("srsData", JSON.stringify(srsData));
-        }
-
-        function rateCard(rating) {
-            if (!flashcards.length) return;
-
-            const card = flashcards[currentCardIndex];
-            updateSRS(card.id, rating);
-
-            flashcards.splice(currentCardIndex, 1);
-
-            if (flashcards.length === 0) {
-                document.getElementById('cardFront').textContent = 'Session complete!';
-                document.getElementById('cardBackHanzi').textContent = '';
-                document.getElementById('cardBackPinyin').textContent = '';
-                document.getElementById('cardBackEnglish').textContent = '';
-                document.getElementById('cardBackExample').textContent = '';
-                document.getElementById('cardFront').style.display = 'block';
-                document.getElementById('cardBack').style.display = 'none';
-                document.getElementById('srsButtons').style.display = 'none';
-                updateFlashcardStatus();
-                return;
-            }
-
-            if (currentCardIndex >= flashcards.length) {
-                currentCardIndex = 0;
-            }
-
-            showCard(currentCardIndex);
-        }
-
-        function resetSRSProgress() {
-            const confirmed = confirm("Reset all spaced repetition progress?");
-            if (!confirmed) return;
-
-            srsData = {};
-            localStorage.removeItem("srsData");
-
-            buildDueFlashcardQueue();
-            showCard(0);
-        }
-
-        function updateFlashcardStatus() {
-            const totalCards = allFlashcards.length;
-            const dueCards = getDueCards(allFlashcards).length;
-
-            document.getElementById('flashcardStatus').textContent =
-                `Due today: ${dueCards} | Total cards: ${totalCards}`;
-        }
-
-        function shuffleArray(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
-            }
-        }
-
-        function showCard(index) {
-            if (!flashcards.length) {
-                document.getElementById('cardFront').textContent = 'No flashcards available.';
-                document.getElementById('cardBackHanzi').textContent = '';
-                document.getElementById('cardBackPinyin').textContent = '';
-                document.getElementById('cardBackEnglish').textContent = '';
-                document.getElementById('cardBackExample').textContent = '';
-                document.getElementById('srsButtons').style.display = 'none';
-                return;
-            }
-
-            currentCardIndex = index;
-            answerShown = false;
-
-            const card = flashcards[currentCardIndex];
-
-            document.getElementById('cardFront').textContent = card.hanzi;
-            document.getElementById('cardBackHanzi').textContent = card.hanzi;
-            document.getElementById('cardBackPinyin').textContent = card.pinyin;
-            document.getElementById('cardBackEnglish').textContent = card.english;
-            document.getElementById('cardBackExample').textContent = card.example;
-
-            document.getElementById('cardFront').style.display = 'block';
-            document.getElementById('cardBack').style.display = 'none';
-            document.getElementById('srsButtons').style.display = 'none';
-
-            updateFlashcardStatus();
-        }
-
-        function showAnswer() {
-            if (!flashcards.length) return;
-
-            answerShown = true;
-            document.getElementById('cardFront').style.display = 'none';
-            document.getElementById('cardBack').style.display = 'block';
-            document.getElementById('srsButtons').style.display = 'flex';
-        }
-
-        function nextCard() {
-            if (!flashcards.length) return;
-            currentCardIndex = (currentCardIndex + 1) % flashcards.length;
-            showCard(currentCardIndex);
-        }
-
-        function prevCard() {
-            if (!flashcards.length) return;
-            currentCardIndex = (currentCardIndex - 1 + flashcards.length) % flashcards.length;
-            showCard(currentCardIndex);
-        }
-
-        document.getElementById('searchInput').addEventListener('input', (e) => {
-            const query = e.target.value;
-            const results = search(query);
-            displayResults(results);
         });
+}
 
-        document.getElementById('nextCardBtn').addEventListener('click', nextCard);
-        document.getElementById('prevCardBtn').addEventListener('click', prevCard);
-        document.getElementById('resetSrsBtn').addEventListener('click', resetSRSProgress);
+function search(query) {
+    query = query.toLowerCase().trim();
+    if (!query) return [];
 
-        document.getElementById('dictionaryModeBtn').addEventListener('click', () => {
-            document.getElementById('dictionarySection').style.display = 'block';
-            document.getElementById('flashcardSection').style.display = 'none';
-        });
+    return dictionary.filter(entry =>
+        entry.hanzi.includes(query) ||
+        entry.pinyin.toLowerCase().includes(query) ||
+        entry.english.toLowerCase().includes(query)
+    );
+}
 
-        document.getElementById('flashcardModeBtn').addEventListener('click', () => {
-            document.getElementById('dictionarySection').style.display = 'none';
-            document.getElementById('flashcardSection').style.display = 'block';
-            updateFlashcardStatus();
-        });
+function displayResults(results) {
+    const resultsDiv = document.getElementById('results');
+    const currentQuery = document.getElementById('searchInput').value.trim();
 
-        document.querySelector('.flashcard').addEventListener('click', () => {
-            if (!flashcards.length) return;
+    if (!currentQuery) {
+        resultsDiv.innerHTML = '<div class="no-results">Start typing to search.</div>';
+        return;
+    }
 
-            if (!answerShown) {
-                showAnswer();
-            }
-        });
+    if (results.length === 0) {
+        resultsDiv.innerHTML = '<div class="no-results">No matches found.</div>';
+        return;
+    }
 
-        document.addEventListener('keydown', (e) => {
-            const flashcardVisible = document.getElementById('flashcardSection').style.display !== 'none';
-            if (!flashcardVisible) return;
+    resultsDiv.innerHTML = results.map(entry => `
+        <div class="result-item">
+            <div class="hanzi">${entry.hanzi}</div>
+            <div class="pinyin">${entry.pinyin}</div>
+            <div class="english">${entry.english}</div>
+            ${entry.example ? `<div class="example">${entry.example}</div>` : ''}
+        </div>
+    `).join('');
+}
 
-            if (document.activeElement.tagName === 'INPUT') return;
+function buildFlashcardsFromDictionary() {
+    allFlashcards = dictionary.map((entry, index) => ({
+        id: index.toString(),
+        hanzi: entry.hanzi || '',
+        pinyin: entry.pinyin || '',
+        english: entry.english || '',
+        example: entry.example || ''
+    })).filter(card => card.hanzi || card.pinyin || card.english || card.example);
+}
 
-            if (e.code === 'Space') {
-                e.preventDefault();
+function buildDueFlashcardQueue() {
+    currentMode = "review";
 
-                if (!answerShown) {
-                    showAnswer();
-                }
-            }
+    const today = todayString();
 
-            if (e.code === 'ArrowRight') {
-                e.preventDefault();
-                nextCard();
-            }
+    const reviewCards = allFlashcards.filter(card => {
+        const srs = srsData[card.id];
+        return srs &&
+               !srs.suspended &&
+               (!srs.buriedUntil || srs.buriedUntil < today) &&
+               srs.due &&
+               srs.due <= today;
+    });
 
-            if (e.code === 'ArrowLeft') {
-                e.preventDefault();
-                prevCard();
-            }
+    const newCards = allFlashcards.filter(card => {
+        const srs = srsData[card.id];
+        return (!srs || (!srs.due && !srs.suspended)) &&
+               (!srs || !srs.buriedUntil || srs.buriedUntil < today);
+    });
 
-            if (answerShown && e.code === 'Digit1') {
-                e.preventDefault();
-                rateCard('again');
-            }
+    shuffleArray(reviewCards);
+    shuffleArray(newCards);
 
-            if (answerShown && e.code === 'Digit2') {
-                e.preventDefault();
-                rateCard('good');
-            }
+    flashcards = reviewCards.slice(0, REVIEW_CARDS_PER_SESSION)
+        .concat(newCards.slice(0, NEW_CARDS_PER_SESSION));
 
-            if (answerShown && e.code === 'Digit3') {
-                e.preventDefault();
-                rateCard('easy');
-            }
-        });
+    shuffleArray(flashcards);
 
-        loadDictionary();
-    </script>
+    currentCardIndex = 0;
+    updateFlashcardStatus();
+}
+
+function buildUnsuspendQueue() {
+    currentMode = "unsuspend";
+
+    flashcards = allFlashcards.filter(card => {
+        const srs = srsData[card.id];
+        return srs && srs.suspended;
+    });
+
+    currentCardIndex = 0;
+    updateFlashcardStatus();
+}
+
+function updateSRS(cardId, rating) {
+    let data = srsData[cardId] || {
+        interval: 1,
+        ease: 2.5,
+        reviews: 0
+    };
+
+    data.suspended = false;
+    delete data.buriedUntil;
+
+    if (rating === "again") {
+        data.interval = 1;
+        data.ease = Math.max(1.3, data.ease - 0.2);
+    }
+
+    if (rating === "good") {
+        data.interval = Math.max(1, Math.round(data.interval * data.ease));
+    }
+
+    if (rating === "easy") {
+        data.ease += 0.15;
+        data.interval = Math.max(2, Math.round(data.interval * data.ease * 1.3));
+    }
+
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + data.interval);
+
+    data.due = formatDate(dueDate);
+    data.lastReviewed = todayString();
+    data.reviews = (data.reviews || 0) + 1;
+
+    srsData[cardId] = data;
+    saveSRS();
+}
+
+function rateCard(rating) {
+    if (!flashcards.length || currentMode !== "review") return;
+
+    const card = flashcards[currentCardIndex];
+    updateSRS(card.id, rating);
+
+    removeCurrentCard();
+}
+
+function buryCard() {
+    if (!flashcards.length || currentMode !== "review") return;
+
+    const card = flashcards[currentCardIndex];
+
+    let data = srsData[card.id] || {};
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    data.buriedUntil = formatDate(tomorrow);
+
+    srsData[card.id] = data;
+    saveSRS();
+
+    removeCurrentCard();
+}
+
+function suspendCard() {
+    if (!flashcards.length || currentMode !== "review") return;
+
+    const card = flashcards[currentCardIndex];
+
+    let data = srsData[card.id] || {};
+    data.suspended = true;
+    delete data.buriedUntil;
+
+    srsData[card.id] = data;
+    saveSRS();
+
+    removeCurrentCard();
+}
+
+function unsuspendCard() {
+    if (!flashcards.length || currentMode !== "unsuspend") return;
+
+    const card = flashcards[currentCardIndex];
+
+    let data = srsData[card.id] || {};
+    data.suspended = false;
+    delete data.buriedUntil;
+
+    if (!data.due) {
+        data.due = todayString();
+    }
+
+    srsData[card.id] = data;
+    saveSRS();
+
+    removeCurrentCard();
+}
+
+function removeCurrentCard() {
+    flashcards.splice(currentCardIndex, 1);
+
+    if (flashcards.length === 0) {
+        document.getElementById('cardFront').textContent =
+            currentMode === "unsuspend" ? 'No more suspended cards.' : 'Session complete!';
+
+        document.getElementById('cardBackHanzi').textContent = '';
+        document.getElementById('cardBackPinyin').textContent = '';
+        document.getElementById('cardBackEnglish').textContent = '';
+        document.getElementById('cardBackExample').textContent = '';
+
+        document.getElementById('cardFront').style.display = 'block';
+        document.getElementById('cardBack').style.display = 'none';
+        document.getElementById('srsButtons').style.display = 'none';
+        document.getElementById('unsuspendButtons').style.display = 'none';
+
+        updateFlashcardStatus();
+        return;
+    }
+
+    if (currentCardIndex >= flashcards.length) {
+        currentCardIndex = 0;
+    }
+
+    showCard(currentCardIndex);
+    updateFlashcardStatus();
+}
+
+function resetSRSProgress() {
+    const confirmed = confirm("Reset all spaced repetition progress, including suspended and buried cards?");
+    if (!confirmed) return;
+
+    srsData = {};
+    localStorage.removeItem("srsData");
+
+    buildDueFlashcardQueue();
+    showCard(0);
+}
+
+function updateFlashcardStatus() {
+    const today = todayString();
+
+    const dueReviewCards = allFlashcards.filter(card => {
+        const srs = srsData[card.id];
+        return srs &&
+               !srs.suspended &&
+               (!srs.buriedUntil || srs.buriedUntil < today) &&
+               srs.due &&
+               srs.due <= today;
+    }).length;
+
+    const newCards = allFlashcards.filter(card => {
+        const srs = srsData[card.id];
+        return (!srs || (!srs.due && !srs.suspended)) &&
+               (!srs || !srs.buriedUntil || srs.buriedUntil < today);
+    }).length;
+
+    const buriedCards = allFlashcards.filter(card => {
+        const srs = srsData[card.id];
+        return srs && srs.buriedUntil && srs.buriedUntil >= today;
+    }).length;
+
+    const suspendedCards = allFlashcards.filter(card => {
+        const srs = srsData[card.id];
+        return srs && srs.suspended;
+    }).length;
+
+    document.getElementById('flashcardStatus').textContent =
+        `Mode: ${currentMode} | Due reviews: ${dueReviewCards} | New left: ${newCards} | Buried today: ${buriedCards} | Suspended: ${suspendedCards} | Session cards: ${flashcards.length}`;
+}
+
+function showCard(index) {
+    if (!flashcards.length) {
+        document.getElementById('cardFront').textContent =
+            currentMode === "unsuspend" ? 'No suspended cards.' : 'No cards available.';
+
+        document.getElementById('cardBackHanzi').textContent = '';
+        document.getElementById('cardBackPinyin').textContent = '';
+        document.getElementById('cardBackEnglish').textContent = '';
+        document.getElementById('cardBackExample').textContent = '';
+        document.getElementById('srsButtons').style.display = 'none';
+        document.getElementById('unsuspendButtons').style.display = 'none';
+        updateFlashcardStatus();
+        return;
+    }
+
+    currentCardIndex = index;
+    answerShown = false;
+
+    const card = flashcards[currentCardIndex];
+
+    document.getElementById('cardFront').textContent = card.hanzi;
+    document.getElementById('cardBackHanzi').textContent = card.hanzi;
+    document.getElementById('cardBackPinyin').textContent = card.pinyin;
+    document.getElementById('cardBackEnglish').textContent = card.english;
+    document.getElementById('cardBackExample').textContent = card.example;
+
+    document.getElementById('cardFront').style.display = 'block';
+    document.getElementById('cardBack').style.display = 'none';
+    document.getElementById('srsButtons').style.display = 'none';
+    document.getElementById('unsuspendButtons').style.display = 'none';
+
+    updateFlashcardStatus();
+}
+
+function showAnswer() {
+    if (!flashcards.length) return;
+
+    answerShown = true;
+
+    document.getElementById('cardFront').style.display = 'none';
+    document.getElementById('cardBack').style.display = 'block';
+
+    if (currentMode === "review") {
+        document.getElementById('srsButtons').style.display = 'flex';
+        document.getElementById('unsuspendButtons').style.display = 'none';
+    }
+
+    if (currentMode === "unsuspend") {
+        document.getElementById('srsButtons').style.display = 'none';
+        document.getElementById('unsuspendButtons').style.display = 'flex';
+    }
+}
+
+function nextCard() {
+    if (!flashcards.length) return;
+    currentCardIndex = (currentCardIndex + 1) % flashcards.length;
+    showCard(currentCardIndex);
+}
+
+function prevCard() {
+    if (!flashcards.length) return;
+    currentCardIndex = (currentCardIndex - 1 + flashcards.length) % flashcards.length;
+    showCard(currentCardIndex);
+}
+
+function todayString() {
+    return new Date().toISOString().split("T")[0];
+}
+
+function formatDate(date) {
+    return date.toISOString().split("T")[0];
+}
+
+function saveSRS() {
+    localStorage.setItem("srsData", JSON.stringify(srsData));
+}
+
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
+document.getElementById('searchInput').addEventListener('input', (e) => {
+    const query = e.target.value;
+    const results = search(query);
+    displayResults(results);
+});
+
+document.getElementById('nextCardBtn').addEventListener('click', nextCard);
+document.getElementById('prevCardBtn').addEventListener('click', prevCard);
+document.getElementById('resetSrsBtn').addEventListener('click', resetSRSProgress);
+
+document.getElementById('dictionaryModeBtn').addEventListener('click', () => {
+    document.getElementById('dictionarySection').style.display = 'block';
+    document.getElementById('flashcardSection').style.display = 'none';
+});
+
+document.getElementById('flashcardModeBtn').addEventListener('click', () => {
+    document.getElementById('dictionarySection').style.display = 'none';
+    document.getElementById('flashcardSection').style.display = 'block';
+
+    buildDueFlashcardQueue();
+    showCard(0);
+});
+
+document.getElementById('unsuspendModeBtn').addEventListener('click', () => {
+    document.getElementById('dictionarySection').style.display = 'none';
+    document.getElementById('flashcardSection').style.display = 'block';
+
+    buildUnsuspendQueue();
+    showCard(0);
+});
+
+document.querySelector('.flashcard').addEventListener('click', () => {
+    if (!flashcards.length) return;
+
+    if (!answerShown) {
+        showAnswer();
+    }
+});
+
+document.addEventListener('keydown', (e) => {
+    const flashcardVisible = document.getElementById('flashcardSection').style.display !== 'none';
+    if (!flashcardVisible) return;
+    if (document.activeElement.tagName === 'INPUT') return;
+
+    if (e.code === 'Space') {
+        e.preventDefault();
+        if (!answerShown) showAnswer();
+    }
+
+    if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        nextCard();
+    }
+
+    if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        prevCard();
+    }
+
+    if (currentMode === "review" && answerShown && e.code === 'Digit1') {
+        e.preventDefault();
+        rateCard('again');
+    }
+
+    if (currentMode === "review" && answerShown && e.code === 'Digit2') {
+        e.preventDefault();
+        rateCard('good');
+    }
+
+    if (currentMode === "review" && answerShown && e.code === 'Digit3') {
+        e.preventDefault();
+        rateCard('easy');
+    }
+
+    if (currentMode === "review" && answerShown && e.code === 'KeyB') {
+        e.preventDefault();
+        buryCard();
+    }
+
+    if (currentMode === "review" && answerShown && e.code === 'KeyS') {
+        e.preventDefault();
+        suspendCard();
+    }
+
+    if (currentMode === "unsuspend" && answerShown && e.code === 'KeyU') {
+        e.preventDefault();
+        unsuspendCard();
+    }
+});
+
+loadDictionary();
+</script>
+
 </body>
 </html>
