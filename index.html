@@ -26,7 +26,8 @@
         }
 
         .mode-buttons button,
-        .flashcard-controls button {
+        .flashcard-controls button,
+        .srs-buttons button {
             padding: 10px 14px;
             border: none;
             border-radius: 6px;
@@ -63,7 +64,6 @@
             margin: 10px 0;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .hanzi {
@@ -99,11 +99,18 @@
             padding: 20px;
         }
 
-        .flashcard-controls {
+        .flashcard-controls,
+        .srs-buttons {
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
             margin-bottom: 20px;
+        }
+
+        .flashcard-status {
+            color: white;
+            margin-bottom: 12px;
+            font-size: 14px;
         }
 
         .flashcard {
@@ -112,7 +119,6 @@
             border-radius: 8px;
             min-height: 260px;
             padding: 30px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -182,7 +188,10 @@
         <div class="flashcard-controls">
             <button id="prevCardBtn">Previous</button>
             <button id="nextCardBtn">Next</button>
+            <button id="resetSrsBtn">Reset SRS Progress</button>
         </div>
+
+        <div id="flashcardStatus" class="flashcard-status"></div>
 
         <div class="flashcard">
             <div id="cardFront" class="card-front">Loading...</div>
@@ -194,15 +203,24 @@
                 <div id="cardBackExample" class="card-back-example"></div>
             </div>
         </div>
+
+        <div class="srs-buttons" id="srsButtons" style="display: none; margin-top: 20px;">
+            <button onclick="rateCard('again')">Again</button>
+            <button onclick="rateCard('good')">Good</button>
+            <button onclick="rateCard('easy')">Easy</button>
+        </div>
     </div>
 
     <script>
         const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTa_ES9bk_ye4K094l7cTTTrI13UiqAqvS5wCjW1XRNXaOLBYx3zrYqBP6Cv49KLOTBxo_WumZ232he/pub?output=csv';
 
         let dictionary = [];
+        let allFlashcards = [];
         let flashcards = [];
         let currentCardIndex = 0;
         let answerShown = false;
+
+        let srsData = JSON.parse(localStorage.getItem("srsData") || "{}");
 
         async function loadDictionary() {
             try {
@@ -211,7 +229,7 @@
                 dictionary = parseCSV(csvText);
 
                 buildFlashcardsFromDictionary();
-                shuffleArray(flashcards);
+                buildDueFlashcardQueue();
                 showCard(0);
 
                 console.log('Dictionary loaded:', dictionary.length, 'entries');
@@ -275,12 +293,113 @@
         }
 
         function buildFlashcardsFromDictionary() {
-            flashcards = dictionary.map(entry => ({
+            allFlashcards = dictionary.map((entry, index) => ({
+                id: index.toString(),
                 hanzi: entry.hanzi || '',
                 pinyin: entry.pinyin || '',
                 english: entry.english || '',
                 example: entry.example || ''
             })).filter(card => card.hanzi || card.pinyin || card.english || card.example);
+        }
+
+        function buildDueFlashcardQueue() {
+            flashcards = getDueCards(allFlashcards);
+
+            if (flashcards.length === 0) {
+                flashcards = allFlashcards.slice();
+            }
+
+            shuffleArray(flashcards);
+            currentCardIndex = 0;
+            updateFlashcardStatus();
+        }
+
+        function getDueCards(cards) {
+            const today = new Date().toISOString().split("T")[0];
+
+            return cards.filter(card => {
+                const srs = srsData[card.id];
+                return !srs || !srs.due || srs.due <= today;
+            });
+        }
+
+        function updateSRS(cardId, rating) {
+            let data = srsData[cardId] || {
+                interval: 1,
+                ease: 2.5,
+                reviews: 0
+            };
+
+            if (rating === "again") {
+                data.interval = 1;
+                data.ease = Math.max(1.3, data.ease - 0.2);
+            }
+
+            if (rating === "good") {
+                data.interval = Math.max(1, Math.round(data.interval * data.ease));
+            }
+
+            if (rating === "easy") {
+                data.ease += 0.15;
+                data.interval = Math.max(2, Math.round(data.interval * data.ease * 1.3));
+            }
+
+            const today = new Date();
+            today.setDate(today.getDate() + data.interval);
+
+            data.due = today.toISOString().split("T")[0];
+            data.lastReviewed = new Date().toISOString().split("T")[0];
+            data.reviews = (data.reviews || 0) + 1;
+
+            srsData[cardId] = data;
+            localStorage.setItem("srsData", JSON.stringify(srsData));
+        }
+
+        function rateCard(rating) {
+            if (!flashcards.length) return;
+
+            const card = flashcards[currentCardIndex];
+            updateSRS(card.id, rating);
+
+            flashcards.splice(currentCardIndex, 1);
+
+            if (flashcards.length === 0) {
+                document.getElementById('cardFront').textContent = 'Session complete!';
+                document.getElementById('cardBackHanzi').textContent = '';
+                document.getElementById('cardBackPinyin').textContent = '';
+                document.getElementById('cardBackEnglish').textContent = '';
+                document.getElementById('cardBackExample').textContent = '';
+                document.getElementById('cardFront').style.display = 'block';
+                document.getElementById('cardBack').style.display = 'none';
+                document.getElementById('srsButtons').style.display = 'none';
+                updateFlashcardStatus();
+                return;
+            }
+
+            if (currentCardIndex >= flashcards.length) {
+                currentCardIndex = 0;
+            }
+
+            showCard(currentCardIndex);
+        }
+
+        function resetSRSProgress() {
+            const confirmed = confirm("Reset all spaced repetition progress?");
+            if (!confirmed) return;
+
+            srsData = {};
+            localStorage.removeItem("srsData");
+
+            buildDueFlashcardQueue();
+            showCard(0);
+        }
+
+        function updateFlashcardStatus() {
+            const totalCards = allFlashcards.length;
+            const dueCards = getDueCards(allFlashcards).length;
+
+            document.getElementById('flashcardStatus').textContent =
+                `Due today: ${dueCards} | Total cards: ${totalCards}`;
         }
 
         function shuffleArray(array) {
@@ -297,6 +416,7 @@
                 document.getElementById('cardBackPinyin').textContent = '';
                 document.getElementById('cardBackEnglish').textContent = '';
                 document.getElementById('cardBackExample').textContent = '';
+                document.getElementById('srsButtons').style.display = 'none';
                 return;
             }
 
@@ -313,6 +433,9 @@
 
             document.getElementById('cardFront').style.display = 'block';
             document.getElementById('cardBack').style.display = 'none';
+            document.getElementById('srsButtons').style.display = 'none';
+
+            updateFlashcardStatus();
         }
 
         function showAnswer() {
@@ -321,6 +444,7 @@
             answerShown = true;
             document.getElementById('cardFront').style.display = 'none';
             document.getElementById('cardBack').style.display = 'block';
+            document.getElementById('srsButtons').style.display = 'flex';
         }
 
         function nextCard() {
@@ -343,6 +467,7 @@
 
         document.getElementById('nextCardBtn').addEventListener('click', nextCard);
         document.getElementById('prevCardBtn').addEventListener('click', prevCard);
+        document.getElementById('resetSrsBtn').addEventListener('click', resetSRSProgress);
 
         document.getElementById('dictionaryModeBtn').addEventListener('click', () => {
             document.getElementById('dictionarySection').style.display = 'block';
@@ -352,6 +477,7 @@
         document.getElementById('flashcardModeBtn').addEventListener('click', () => {
             document.getElementById('dictionarySection').style.display = 'none';
             document.getElementById('flashcardSection').style.display = 'block';
+            updateFlashcardStatus();
         });
 
         document.querySelector('.flashcard').addEventListener('click', () => {
@@ -359,8 +485,6 @@
 
             if (!answerShown) {
                 showAnswer();
-            } else {
-                nextCard();
             }
         });
 
@@ -375,8 +499,6 @@
 
                 if (!answerShown) {
                     showAnswer();
-                } else {
-                    nextCard();
                 }
             }
 
@@ -388,6 +510,21 @@
             if (e.code === 'ArrowLeft') {
                 e.preventDefault();
                 prevCard();
+            }
+
+            if (answerShown && e.code === 'Digit1') {
+                e.preventDefault();
+                rateCard('again');
+            }
+
+            if (answerShown && e.code === 'Digit2') {
+                e.preventDefault();
+                rateCard('good');
+            }
+
+            if (answerShown && e.code === 'Digit3') {
+                e.preventDefault();
+                rateCard('easy');
             }
         });
 
