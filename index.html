@@ -31,12 +31,12 @@ h1 {
 .mode-buttons button,
 .flashcard-controls button,
 .srs-buttons button {
-    padding: 12px 22px;
+    padding: clamp(8px, 1.5vw, 12px) clamp(12px, 2vw, 22px);
     border: none;
     border-radius: 8px;
     cursor: pointer;
     background: white;
-    font-size: 16px;
+    font-size: clamp(14px, 1.8vw, 16px);
 }
 
 .search-container {
@@ -125,7 +125,7 @@ h1 {
 .flashcard {
     background: white;
     border-radius: 12px;
-    min-height: 360px;
+    min-height: 340px;
     padding: 35px;
     display: flex;
     align-items: center;
@@ -136,12 +136,33 @@ h1 {
     margin-bottom: 20px;
 }
 
-.card-front {
+.card-front,
+.card-back-hanzi {
     font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-    font-size: 80px;       /* reduced from 110 */
-    font-weight: 700;      /* slightly less aggressive */
-    color: #000;           /* black */
+    font-weight: 700;
+    color: #000;
     line-height: 1.1;
+    letter-spacing: 2px;
+}
+
+.hanzi-size-1 {
+    font-size: clamp(72px, 12vw, 100px);
+}
+
+.hanzi-size-2 {
+    font-size: clamp(64px, 10vw, 90px);
+}
+
+.hanzi-size-3 {
+    font-size: clamp(56px, 8vw, 78px);
+}
+
+.hanzi-size-4 {
+    font-size: clamp(48px, 7vw, 68px);
+}
+
+.hanzi-size-long {
+    font-size: clamp(38px, 6vw, 56px);
 }
 
 .card-back {
@@ -149,27 +170,22 @@ h1 {
 }
 
 .card-back-hanzi {
-    font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-    font-size: 80px;
-    font-weight: 700;
-    color: #000;
-    line-height: 1.1;
     margin-bottom: 12px;
 }
 
 .card-back-pinyin {
-    font-size: 30px;
+    font-size: clamp(18px, 3vw, 28px);
     color: #666;
-    margin-bottom: 18px;
+    margin-bottom: 14px;
     font-weight: 600;
 }
 
 .card-back-english {
-    font-size: 34px;
+    font-size: clamp(20px, 3.5vw, 32px);
     color: #333;
     line-height: 1.4;
     margin-bottom: 14px;
-    font-weight: 700;
+    font-weight: 600;
     white-space: pre-wrap;
 }
 
@@ -185,16 +201,94 @@ h1 {
     justify-content: center;
     gap: 10px;
     flex-wrap: wrap;
-    margin-top: 15px;
+    margin-top: 12px;
+}
+
+.primary-buttons {
+    margin-bottom: 8px;
+}
+
+.primary-buttons button:hover {
+    transform: translateY(-1px);
+    transition: 0.15s ease;
+}
+
+.again-btn {
+    background-color: #ff4d4f !important;
+    color: white;
+    font-weight: 600;
+}
+
+.again-btn:hover {
+    background-color: #d9363e !important;
+}
+
+.good-btn {
+    background-color: #52c41a !important;
+    color: white;
+    font-weight: 600;
+}
+
+.good-btn:hover {
+    background-color: #389e0d !important;
+}
+
+.easy-btn {
+    background-color: #1677ff !important;
+    color: white;
+    font-weight: 600;
+}
+
+.easy-btn:hover {
+    background-color: #0958d9 !important;
+}
+
+.secondary-buttons {
+    opacity: 0.95;
+}
+
+.secondary-buttons button,
+.secondary-controls button {
+    font-size: 14px;
+    padding: 9px 14px;
+}
+
+.secondary-buttons button:nth-child(2) {
+    background-color: #ffe5e5;
 }
 
 .secondary-controls {
     margin-top: 10px;
 }
 
-.secondary-controls button {
-    font-size: 14px;
-    padding: 9px 14px;
+@media (max-width: 600px) {
+    body {
+        padding: 20px 12px;
+    }
+
+    h1 {
+        font-size: 36px;
+    }
+
+    .flashcard {
+        padding: 20px;
+        min-height: 260px;
+    }
+
+    .mode-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .flashcard-controls,
+    .srs-buttons {
+        justify-content: center;
+    }
+
+    .secondary-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
 }
 </style>
 </head>
@@ -241,12 +335,18 @@ h1 {
             </div>
         </div>
 
-        <div id="srsButtons" class="srs-buttons" style="display:none;">
-            <button onclick="rate('again')">Again</button>
-            <button onclick="rate('good')">Good</button>
-            <button onclick="rate('easy')">Easy</button>
-            <button onclick="bury()">Bury Today</button>
-            <button onclick="suspend()">Never Show Again</button>
+        <div id="srsButtons" style="display:none;">
+            <div class="srs-buttons primary-buttons">
+                <button class="again-btn" onclick="rate('again')">Again</button>
+                <button class="good-btn" onclick="rate('good')">Good</button>
+                <button class="easy-btn" onclick="rate('easy')">Easy</button>
+            </div>
+
+            <div class="srs-buttons secondary-buttons">
+                <button onclick="bury()">Bury Today</button>
+                <button onclick="suspend()">Never Show Again</button>
+                <button onclick="enterUnsuspendMode()">Unsuspend Cards</button>
+            </div>
         </div>
 
         <div id="unsuspendButtons" class="srs-buttons" style="display:none;">
@@ -427,18 +527,49 @@ function show(i) {
 
     let c = sessionCards[index];
 
-    document.getElementById("front").innerText = c.hanzi;
-    document.getElementById("backHanzi").innerText = c.hanzi;
+    const front = document.getElementById("front");
+    const backHanzi = document.getElementById("backHanzi");
+
+    front.innerText = c.hanzi;
+    backHanzi.innerText = c.hanzi;
+
+    applyHanziSize(front, c.hanzi);
+    applyHanziSize(backHanzi, c.hanzi);
+
     document.getElementById("backPinyin").innerText = c.pinyin;
     document.getElementById("backEnglish").innerText = c.english;
     document.getElementById("backExample").innerText = c.example;
 
-    document.getElementById("front").style.display = "block";
+    front.style.display = "block";
     document.getElementById("back").style.display = "none";
     document.getElementById("srsButtons").style.display = "none";
     document.getElementById("unsuspendButtons").style.display = "none";
 
     updateStatus();
+}
+
+function applyHanziSize(element, text) {
+    element.classList.remove(
+        "hanzi-size-1",
+        "hanzi-size-2",
+        "hanzi-size-3",
+        "hanzi-size-4",
+        "hanzi-size-long"
+    );
+
+    const length = [...text].length;
+
+    if (length <= 1) {
+        element.classList.add("hanzi-size-1");
+    } else if (length === 2) {
+        element.classList.add("hanzi-size-2");
+    } else if (length === 3) {
+        element.classList.add("hanzi-size-3");
+    } else if (length === 4) {
+        element.classList.add("hanzi-size-4");
+    } else {
+        element.classList.add("hanzi-size-long");
+    }
 }
 
 function flipCard() {
@@ -449,7 +580,7 @@ function flipCard() {
         document.getElementById("back").style.display = "block";
 
         if (mode === "review") {
-            document.getElementById("srsButtons").style.display = "flex";
+            document.getElementById("srsButtons").style.display = "block";
         }
 
         if (mode === "unsuspend") {
