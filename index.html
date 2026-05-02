@@ -30,7 +30,8 @@ h1 {
 
 .mode-buttons button,
 .flashcard-controls button,
-.srs-buttons button {
+.srs-buttons button,
+.ai-buttons button {
     padding: clamp(8px, 1.5vw, 12px) clamp(12px, 2vw, 22px);
     border: none;
     border-radius: 8px;
@@ -196,6 +197,53 @@ h1 {
     white-space: pre-wrap;
 }
 
+.ai-sentence-box {
+    margin-top: 18px;
+    padding: 14px;
+    border-radius: 10px;
+    background: #f4f4f4;
+    text-align: left;
+    display: none;
+}
+
+.ai-sentence-title {
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.ai-chinese {
+    font-size: 22px;
+    color: #111;
+    margin-bottom: 6px;
+}
+
+.ai-pinyin {
+    font-size: 16px;
+    color: #666;
+    margin-bottom: 6px;
+}
+
+.ai-english {
+    font-size: 16px;
+    color: #333;
+    margin-bottom: 6px;
+}
+
+.ai-note {
+    font-size: 14px;
+    color: #555;
+    font-style: italic;
+}
+
+.ai-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
 .srs-buttons {
     display: flex;
     justify-content: center;
@@ -219,28 +267,16 @@ h1 {
     font-weight: 600;
 }
 
-.again-btn:hover {
-    background-color: #d9363e !important;
-}
-
 .good-btn {
     background-color: #52c41a !important;
     color: white;
     font-weight: 600;
 }
 
-.good-btn:hover {
-    background-color: #389e0d !important;
-}
-
 .easy-btn {
     background-color: #1677ff !important;
     color: white;
     font-weight: 600;
-}
-
-.easy-btn:hover {
-    background-color: #0958d9 !important;
 }
 
 .secondary-buttons {
@@ -301,7 +337,8 @@ h1 {
         margin-bottom: 14px;
     }
 
-    .srs-buttons {
+    .srs-buttons,
+    .ai-buttons {
         gap: 8px;
         margin-top: 10px;
     }
@@ -365,6 +402,19 @@ h1 {
                 <div id="backPinyin" class="card-back-pinyin"></div>
                 <div id="backEnglish" class="card-back-english"></div>
                 <div id="backExample" class="card-back-example"></div>
+
+                <div id="aiSentenceBox" class="ai-sentence-box">
+                    <div class="ai-sentence-title">AI Example Sentence</div>
+                    <div id="aiChinese" class="ai-chinese"></div>
+                    <div id="aiPinyin" class="ai-pinyin"></div>
+                    <div id="aiEnglish" class="ai-english"></div>
+                    <div id="aiNote" class="ai-note"></div>
+                </div>
+
+                <div id="aiButtons" class="ai-buttons">
+                    <button onclick="generateAISentence(false); event.stopPropagation();">Generate AI Sentence</button>
+                    <button onclick="generateAISentence(true); event.stopPropagation();">Generate New Sentence</button>
+                </div>
             </div>
         </div>
 
@@ -397,6 +447,8 @@ h1 {
 <script>
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTa_ES9bk_ye4K094l7cTTTrI13UiqAqvS5wCjW1XRNXaOLBYx3zrYqBP6Cv49KLOTBxo_WumZ232he/pub?output=csv";
 
+const AI_SENTENCE_API = "https://chinese-sentence-api.vercel.app/api/generate-sentence";
+
 const NEW_LIMIT = 20;
 const REVIEW_LIMIT = 50;
 
@@ -407,6 +459,7 @@ let index = 0;
 let shown = false;
 let mode = "review";
 let srs = JSON.parse(localStorage.getItem("srs") || "{}");
+let aiSentences = JSON.parse(localStorage.getItem("aiSentences") || "{}");
 
 async function load() {
     const res = await fetch(SHEET_URL);
@@ -541,6 +594,8 @@ function updateStatus() {
 }
 
 function show(i) {
+    hideAISentence();
+
     if (!sessionCards.length) {
         document.getElementById("front").innerText = mode === "unsuspend"
             ? "No suspended cards."
@@ -611,6 +666,13 @@ function flipCard() {
         document.getElementById("front").style.display = "none";
         document.getElementById("back").style.display = "block";
 
+        const card = sessionCards[index];
+        const savedSentence = aiSentences[card.id];
+
+        if (savedSentence) {
+            displayAISentence(savedSentence);
+        }
+
         if (mode === "review") {
             document.getElementById("srsButtons").style.display = "block";
         }
@@ -619,6 +681,72 @@ function flipCard() {
             document.getElementById("unsuspendButtons").style.display = "flex";
         }
     }
+}
+
+async function generateAISentence(forceNew) {
+    if (!sessionCards.length) return;
+
+    const card = sessionCards[index];
+
+    if (!forceNew && aiSentences[card.id]) {
+        displayAISentence(aiSentences[card.id]);
+        return;
+    }
+
+    const aiBox = document.getElementById("aiSentenceBox");
+    aiBox.style.display = "block";
+    document.getElementById("aiChinese").innerText = "Generating sentence...";
+    document.getElementById("aiPinyin").innerText = "";
+    document.getElementById("aiEnglish").innerText = "";
+    document.getElementById("aiNote").innerText = "";
+
+    try {
+        const response = await fetch(AI_SENTENCE_API, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                hanzi: card.hanzi,
+                pinyin: card.pinyin,
+                english: card.english,
+                level: "HSK 2 to HSK 4"
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || "Failed to generate sentence.");
+        }
+
+        aiSentences[card.id] = data;
+        localStorage.setItem("aiSentences", JSON.stringify(aiSentences));
+
+        displayAISentence(data);
+
+    } catch (error) {
+        document.getElementById("aiChinese").innerText = "Could not generate sentence.";
+        document.getElementById("aiPinyin").innerText = "";
+        document.getElementById("aiEnglish").innerText = error.message;
+        document.getElementById("aiNote").innerText = "";
+    }
+}
+
+function displayAISentence(sentence) {
+    document.getElementById("aiSentenceBox").style.display = "block";
+    document.getElementById("aiChinese").innerText = sentence.chinese || "";
+    document.getElementById("aiPinyin").innerText = sentence.pinyin || "";
+    document.getElementById("aiEnglish").innerText = sentence.english || "";
+    document.getElementById("aiNote").innerText = sentence.note || "";
+}
+
+function hideAISentence() {
+    document.getElementById("aiSentenceBox").style.display = "none";
+    document.getElementById("aiChinese").innerText = "";
+    document.getElementById("aiPinyin").innerText = "";
+    document.getElementById("aiEnglish").innerText = "";
+    document.getElementById("aiNote").innerText = "";
 }
 
 function rate(r) {
