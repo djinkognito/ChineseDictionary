@@ -6,6 +6,11 @@
 <title>Chinese Dictionary</title>
 
 <style>
+
+/* =========================================================
+   GLOBAL PAGE STYLES
+   Controls the overall layout, font, spacing, and background.
+   ========================================================= */
 body {
     font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
     max-width: 900px;
@@ -14,6 +19,7 @@ body {
     background-color: #0b0826;
 }
 
+/* Main page title */
 h1 {
     color: white;
     text-align: center;
@@ -21,6 +27,7 @@ h1 {
     font-size: 48px;
 }
 
+/* Top navigation buttons: Dictionary, Browse Topics, Flashcards */
 .mode-buttons {
     display: flex;
     justify-content: center;
@@ -40,6 +47,7 @@ h1 {
     font-size: clamp(14px, 1.8vw, 16px);
 }
 
+/* Dictionary search box and topic filter container */
 .search-container {
     max-width: 650px;
     margin: 0 auto 25px auto;
@@ -62,6 +70,7 @@ h1 {
     border-color: #0b0826;
 }
 
+/* Individual dictionary result card */
 .result-item {
     background: white;
     border: 1px solid #ddd;
@@ -103,6 +112,10 @@ h1 {
     padding: 20px;
 }
 
+/* =========================================================
+   FLASHCARD LAYOUT
+   Controls flashcard navigation, card size, and review buttons.
+   ========================================================= */
 .flashcard-wrapper {
     max-width: 760px;
     margin: 0 auto;
@@ -197,6 +210,7 @@ h1 {
     white-space: pre-wrap;
 }
 
+/* AI-generated example sentence panel shown on the back of a card */
 .ai-sentence-box {
     margin-top: 18px;
     padding: 14px;
@@ -244,6 +258,7 @@ h1 {
     margin-top: 12px;
 }
 
+/* Spaced-repetition answer buttons: Again, Good, Easy, etc. */
 .srs-buttons {
     display: flex;
     justify-content: center;
@@ -298,6 +313,10 @@ h1 {
 }
 
 
+/* =========================================================
+   TOPIC FILTERING AND BROWSE TOPICS
+   Controls topic dropdowns, badges, tiles, and topic detail view.
+   ========================================================= */
 .category-filter-row {
     display: flex;
     gap: 10px;
@@ -426,6 +445,10 @@ h1 {
     font-weight: 600;
 }
 
+/* =========================================================
+   MOBILE RESPONSIVE STYLES
+   Adjusts spacing and layout for phones and narrow screens.
+   ========================================================= */
 @media (max-width: 600px) {
     body {
         padding: 14px 10px;
@@ -503,14 +526,22 @@ h1 {
 
 <body>
 
+<!-- =======================================================
+     APP HEADER
+     ======================================================= -->
 <h1>Chinese Dictionary</h1>
 
+<!-- Main app navigation -->
 <div class="mode-buttons">
     <button id="dictionaryModeBtn">Dictionary</button>
     <button id="browseModeBtn">Browse Topics</button>
     <button id="flashcardModeBtn">Flashcards</button>
 </div>
 
+<!-- =====================================================
+     DICTIONARY MODE
+     Search vocabulary and filter results by parent topic.
+     ===================================================== -->
 <div id="dictionarySection">
     <div class="search-container">
         <input id="searchInput"
@@ -530,6 +561,10 @@ h1 {
     </div>
 </div>
 
+<!-- =====================================================
+     BROWSE TOPICS MODE
+     Displays topic tiles and the words inside each topic.
+     ===================================================== -->
 <div id="browseSection" style="display:none;">
     <div class="browse-wrapper">
         <div id="categoryBrowseView">
@@ -552,6 +587,10 @@ h1 {
     </div>
 </div>
 
+<!-- =====================================================
+     FLASHCARD MODE
+     Runs category-based SRS review sessions.
+     ===================================================== -->
 <div id="flashcardSection" style="display:none;">
     <div class="flashcard-wrapper">
 
@@ -620,6 +659,11 @@ h1 {
 </div>
 
 <script>
+
+/* =========================================================
+   APP CONFIGURATION
+   External data source, AI endpoint, and daily card limits.
+   ========================================================= */
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTa_ES9bk_ye4K094l7cTTTrI13UiqAqvS5wCjW1XRNXaOLBYx3zrYqBP6Cv49KLOTBxo_WumZ232he/pub?output=csv";
 
 const AI_SENTENCE_API = "https://chinese-sentence-api.vercel.app/api/generate-sentence";
@@ -627,6 +671,11 @@ const AI_SENTENCE_API = "https://chinese-sentence-api.vercel.app/api/generate-se
 const NEW_LIMIT = 20;
 const REVIEW_LIMIT = 50;
 
+/* =========================================================
+   APP STATE
+   Stores dictionary entries, flashcard sessions, SRS data,
+   selected topics, and the currently displayed card.
+   ========================================================= */
 let dictionary = [];
 let allCards = [];
 let sessionCards = [];
@@ -638,6 +687,11 @@ let aiSentences = JSON.parse(localStorage.getItem("aiSentences") || "{}");
 let currentTopic = "";
 let studyCategory = "";
 
+/* =========================================================
+   INITIAL APP LOAD
+   Downloads the Google Sheet, builds cards, populates topic
+   controls, and prepares the first flashcard session.
+   ========================================================= */
 async function load() {
     const res = await fetch(SHEET_URL);
     const text = await res.text();
@@ -650,7 +704,8 @@ async function load() {
         pinyin: d.pinyin,
         english: d.english,
         example: d.example || "",
-        category: d.category || "Uncategorized"
+        category: d.category || "Uncategorized",
+        topic: getParentTopic(d.category)
     }));
 
     populateCategoryControls();
@@ -662,6 +717,11 @@ async function load() {
         '<div class="no-results">Start typing to search.</div>';
 }
 
+/* =========================================================
+   CSV PARSER
+   Converts the published Google Sheet CSV into JavaScript
+   objects. Supports quoted commas and header-based columns.
+   ========================================================= */
 function parseCSV(csv) {
     const rows = [];
     let row = [];
@@ -722,12 +782,18 @@ function parseCSV(csv) {
     })).filter(entry => entry.hanzi || entry.pinyin || entry.english);
 }
 
+/* =========================================================
+   DICTIONARY SEARCH
+   Searches Hanzi, Pinyin, and English while respecting the
+   currently selected parent topic.
+   ========================================================= */
 function search(query) {
     query = query.toLowerCase().trim();
     const selectedCategory = document.getElementById("categoryFilter").value;
 
     return dictionary.filter(entry => {
-        const matchesCategory = !selectedCategory || entry.category === selectedCategory;
+        const matchesCategory = !selectedCategory ||
+            getParentTopic(entry.category) === selectedCategory;
         const matchesQuery = !query ||
             entry.hanzi.includes(query) ||
             entry.pinyin.toLowerCase().includes(query) ||
@@ -737,6 +803,7 @@ function search(query) {
     });
 }
 
+/* Renders matching dictionary entries on the page */
 function displayResults(results) {
     const resultsDiv = document.getElementById("results");
     const currentQuery = document.getElementById("searchInput").value.trim();
@@ -758,12 +825,13 @@ function displayResults(results) {
             <div class="hanzi">${entry.hanzi}</div>
             <div class="pinyin">${entry.pinyin}</div>
             <div class="english">${entry.english}</div>
-            <div class="category-badge">${escapeHTML(entry.category || "Uncategorized")}</div>
+            <div class="category-badge">${escapeHTML(getParentTopic(entry.category))}</div>
             ${entry.example ? `<div class="example">${entry.example}</div>` : ""}
         </div>
     `).join("");
 }
 
+/* Prevents sheet content from being interpreted as HTML */
 function escapeHTML(value) {
     return String(value ?? "")
         .replaceAll("&", "&amp;")
@@ -773,11 +841,21 @@ function escapeHTML(value) {
         .replaceAll("'", "&#039;");
 }
 
+/* Returns only the text before the first slash.
+   Example: "Food / Fruit" becomes "Food". */
+function getParentTopic(category) {
+    const value = String(category || "Uncategorized").trim();
+    const parent = value.split("/")[0].trim();
+    return parent || "Uncategorized";
+}
+
+/* Builds the unique list of parent topics used by dropdowns */
 function getCategories() {
-    return [...new Set(dictionary.map(entry => entry.category || "Uncategorized"))]
+    return [...new Set(dictionary.map(entry => getParentTopic(entry.category)))]
         .sort((a, b) => a.localeCompare(b));
 }
 
+/* Adds parent-topic options to Dictionary and Flashcard dropdowns */
 function populateCategoryControls() {
     const categories = getCategories();
     const options = categories.map(category =>
@@ -791,25 +869,27 @@ function populateCategoryControls() {
         '<option value="">All Topics</option>' + options;
 }
 
+/* Builds the Browse Topics tiles and combines subcategory counts */
 function renderCategoryGrid() {
     const counts = dictionary.reduce((map, entry) => {
-        const category = entry.category || "Uncategorized";
-        map[category] = (map[category] || 0) + 1;
+        const topic = getParentTopic(entry.category);
+        map[topic] = (map[topic] || 0) + 1;
         return map;
     }, {});
 
-    const categories = Object.keys(counts).sort((a, b) => a.localeCompare(b));
-    document.getElementById("categoryGrid").innerHTML = categories.map(category => `
-        <div class="category-card" onclick='openTopic(decodeURIComponent("${encodeURIComponent(category).replaceAll("'", "%27")}"))'>
-            <div class="category-card-name">${escapeHTML(category)}</div>
-            <div class="category-card-count">${counts[category]} ${counts[category] === 1 ? "word" : "words"}</div>
+    const topics = Object.keys(counts).sort((a, b) => a.localeCompare(b));
+    document.getElementById("categoryGrid").innerHTML = topics.map(topic => `
+        <div class="category-card" onclick='openTopic(decodeURIComponent("${encodeURIComponent(topic).replaceAll("'", "%27")}"))'>
+            <div class="category-card-name">${escapeHTML(topic)}</div>
+            <div class="category-card-count">${counts[topic]} ${counts[topic] === 1 ? "word" : "words"}</div>
         </div>
     `).join("");
 }
 
+/* Opens one topic and displays every word grouped under it */
 function openTopic(category) {
     currentTopic = category;
-    const words = dictionary.filter(entry => (entry.category || "Uncategorized") === category);
+    const words = dictionary.filter(entry => getParentTopic(entry.category) === category);
 
     document.getElementById("categoryBrowseView").style.display = "none";
     document.getElementById("topicDetailView").style.display = "block";
@@ -827,12 +907,14 @@ function openTopic(category) {
     `).join("");
 }
 
+/* Returns from a topic detail page to the topic tile grid */
 function showCategoryGrid() {
     currentTopic = "";
     document.getElementById("categoryBrowseView").style.display = "block";
     document.getElementById("topicDetailView").style.display = "none";
 }
 
+/* Opens Dictionary mode with the current Browse topic selected */
 function filterDictionaryToCurrentTopic() {
     if (!currentTopic) return;
     showSection("dictionary");
@@ -840,6 +922,7 @@ function filterDictionaryToCurrentTopic() {
     displayResults(search(document.getElementById("searchInput").value));
 }
 
+/* Opens Flashcard mode and starts a session for this topic */
 function studyCurrentTopic() {
     if (!currentTopic) return;
     studyCategory = currentTopic;
@@ -849,22 +932,29 @@ function studyCurrentTopic() {
     show(0);
 }
 
+/* Shows one main app section and hides the other two */
 function showSection(section) {
     document.getElementById("dictionarySection").style.display = section === "dictionary" ? "block" : "none";
     document.getElementById("browseSection").style.display = section === "browse" ? "block" : "none";
     document.getElementById("flashcardSection").style.display = section === "flashcards" ? "block" : "none";
 }
 
+/* Returns today's date as YYYY-MM-DD for SRS scheduling */
 function today() {
     return new Date().toISOString().split("T")[0];
 }
 
+/* =========================================================
+   SRS SESSION BUILDER
+   Selects due cards and new cards, optionally limited to the
+   chosen parent topic.
+   ========================================================= */
 function buildSession() {
     mode = "review";
     let t = today();
 
     const eligibleCards = studyCategory
-        ? allCards.filter(c => c.category === studyCategory)
+        ? allCards.filter(c => c.topic === studyCategory)
         : allCards;
 
     let review = eligibleCards.filter(c => {
@@ -894,6 +984,7 @@ function buildSession() {
     updateStatus();
 }
 
+/* Shows only cards previously marked "Never Show Again" */
 function enterUnsuspendMode() {
     mode = "unsuspend";
     sessionCards = allCards.filter(c => srs[c.id]?.suspended);
@@ -901,10 +992,11 @@ function enterUnsuspendMode() {
     show(0);
 }
 
+/* Updates due, new, suspended, topic, and session counts */
 function updateStatus() {
     let t = today();
     const statusCards = studyCategory
-        ? allCards.filter(c => c.category === studyCategory)
+        ? allCards.filter(c => c.topic === studyCategory)
         : allCards;
 
     let due = statusCards.filter(c => {
@@ -922,6 +1014,7 @@ function updateStatus() {
         `Mode: ${mode}${studyCategory ? ` | Topic: ${studyCategory}` : ""} | Due: ${due} | New: ${newCount} | Suspended: ${suspended} | Session: ${sessionCards.length}`;
 }
 
+/* Displays one flashcard and resets it to the front side */
 function show(i) {
     hideAISentence();
 
@@ -964,6 +1057,7 @@ function show(i) {
     updateStatus();
 }
 
+/* Shrinks Hanzi text automatically when a card contains more characters */
 function applyHanziSize(element, text) {
     element.classList.remove(
         "hanzi-size-1",
@@ -988,6 +1082,7 @@ function applyHanziSize(element, text) {
     }
 }
 
+/* Reveals the answer side and displays SRS controls */
 function flipCard() {
     if (!shown) {
         shown = true;
@@ -1012,6 +1107,10 @@ function flipCard() {
     }
 }
 
+/* =========================================================
+   AI SENTENCE GENERATION
+   Requests and saves an example sentence for the current word.
+   ========================================================= */
 async function generateAISentence(forceNew) {
     if (!sessionCards.length) return;
 
@@ -1062,6 +1161,7 @@ async function generateAISentence(forceNew) {
     }
 }
 
+/* Displays a saved or newly generated AI sentence */
 function displayAISentence(sentence) {
     document.getElementById("aiSentenceBox").style.display = "block";
     document.getElementById("aiChinese").innerText = sentence.chinese || "";
@@ -1070,6 +1170,7 @@ function displayAISentence(sentence) {
     document.getElementById("aiNote").innerText = sentence.note || "";
 }
 
+/* Clears the AI sentence panel when moving to another card */
 function hideAISentence() {
     document.getElementById("aiSentenceBox").style.display = "none";
     document.getElementById("aiChinese").innerText = "";
@@ -1078,6 +1179,11 @@ function hideAISentence() {
     document.getElementById("aiNote").innerText = "";
 }
 
+/* =========================================================
+   SRS CARD ACTIONS
+   Updates review intervals and card visibility based on the
+   selected response.
+   ========================================================= */
 function rate(r) {
     if (mode !== "review" || !sessionCards.length) return;
 
@@ -1110,6 +1216,7 @@ function rate(r) {
     remove();
 }
 
+/* Hides the current card until tomorrow */
 function bury() {
     if (!sessionCards.length) return;
 
@@ -1125,6 +1232,7 @@ function bury() {
     remove();
 }
 
+/* Removes the current card from normal review sessions */
 function suspend() {
     if (!sessionCards.length) return;
 
@@ -1138,6 +1246,7 @@ function suspend() {
     remove();
 }
 
+/* Restores a suspended card to normal review */
 function unsuspend() {
     if (mode !== "unsuspend" || !sessionCards.length) return;
 
@@ -1155,6 +1264,7 @@ function unsuspend() {
     remove();
 }
 
+/* Removes the answered card from the current session */
 function remove() {
     sessionCards.splice(index, 1);
 
@@ -1166,18 +1276,21 @@ function remove() {
     updateStatus();
 }
 
+/* Moves forward through the current session */
 function nextCard() {
     if (!sessionCards.length) return;
     index = (index + 1) % sessionCards.length;
     show(index);
 }
 
+/* Moves backward through the current session */
 function prevCard() {
     if (!sessionCards.length) return;
     index = (index - 1 + sessionCards.length) % sessionCards.length;
     show(index);
 }
 
+/* Deletes all locally stored SRS progress after confirmation */
 function resetSRS() {
     const confirmed = confirm("Reset all SRS progress, including suspended cards?");
     if (!confirmed) return;
@@ -1188,10 +1301,12 @@ function resetSRS() {
     show(0);
 }
 
+/* Saves SRS data in this browser's localStorage */
 function save() {
     localStorage.setItem("srs", JSON.stringify(srs));
 }
 
+/* Randomizes the order of cards in a session */
 function shuffle(a) {
     for (let i = a.length - 1; i > 0; i--) {
         let j = Math.floor(Math.random() * (i + 1));
@@ -1199,6 +1314,11 @@ function shuffle(a) {
     }
 }
 
+/* =========================================================
+   USER INTERACTION AND EVENT HANDLERS
+   Connects buttons, dropdowns, typing, and keyboard shortcuts
+   to the functions above.
+   ========================================================= */
 document.getElementById("searchInput").addEventListener("input", e => {
     const results = search(e.target.value);
     displayResults(results);
@@ -1262,6 +1382,7 @@ document.addEventListener("keydown", e => {
     }
 });
 
+/* Start the application */
 load();
 </script>
 
