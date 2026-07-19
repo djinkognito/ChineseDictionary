@@ -57,12 +57,19 @@ h1 {
 }
 
 #searchInput {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     padding: 14px;
     font-size: 18px;
     border: 2px solid #ddd;
     border-radius: 6px;
     box-sizing: border-box;
+}
+
+.search-row {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
 }
 
 #searchInput:focus {
@@ -317,20 +324,16 @@ h1 {
    TOPIC FILTERING AND BROWSE TOPICS
    Controls topic dropdowns, badges, tiles, and topic detail view.
    ========================================================= */
-.category-filter-row {
-    display: flex;
-    gap: 10px;
-    margin-top: 12px;
-    align-items: center;
+#categoryFilter {
+    width: 135px;
+    flex: 0 0 135px;
+    padding: 11px 34px 11px 12px;
+    font-size: 16px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    background: white;
 }
 
-.category-filter-row label {
-    font-weight: 600;
-    color: #333;
-    white-space: nowrap;
-}
-
-#categoryFilter,
 #flashcardCategoryFilter {
     width: 100%;
     padding: 11px;
@@ -512,9 +515,16 @@ h1 {
         padding: 14px;
     }
 
-    .category-filter-row {
-        flex-direction: column;
-        align-items: stretch;
+    .search-row {
+        gap: 8px;
+    }
+
+    #categoryFilter {
+        width: 112px;
+        flex-basis: 112px;
+        padding-left: 10px;
+        padding-right: 26px;
+        font-size: 14px;
     }
 
     .category-grid {
@@ -544,14 +554,13 @@ h1 {
      ===================================================== -->
 <div id="dictionarySection">
     <div class="search-container">
-        <input id="searchInput"
-               placeholder="Type to search (Hanzi, Pinyin, or English)..."
-               autocomplete="off">
+        <div class="search-row">
+            <input id="searchInput"
+                   placeholder="Type to search (Hanzi, Pinyin, or English)..."
+                   autocomplete="off">
 
-        <div class="category-filter-row">
-            <label for="categoryFilter">Topic</label>
-            <select id="categoryFilter">
-                <option value="">All Topics</option>
+            <select id="categoryFilter" aria-label="Topic">
+                <option value="">Topic</option>
             </select>
         </div>
     </div>
@@ -863,7 +872,7 @@ function populateCategoryControls() {
     ).join("");
 
     document.getElementById("categoryFilter").innerHTML =
-        '<option value="">All Topics</option>' + options;
+        '<option value="">Topic</option>' + options;
 
     document.getElementById("flashcardCategoryFilter").innerHTML =
         '<option value="">All Topics</option>' + options;
