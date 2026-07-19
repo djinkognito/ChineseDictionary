@@ -297,6 +297,135 @@ h1 {
     margin-top: 10px;
 }
 
+
+.category-filter-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+    align-items: center;
+}
+
+.category-filter-row label {
+    font-weight: 600;
+    color: #333;
+    white-space: nowrap;
+}
+
+#categoryFilter,
+#flashcardCategoryFilter {
+    width: 100%;
+    padding: 11px;
+    font-size: 16px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    background: white;
+}
+
+.category-badge {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: #eee;
+    color: #444;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.browse-wrapper {
+    max-width: 760px;
+    margin: 0 auto;
+}
+
+.browse-heading {
+    color: white;
+    text-align: center;
+    margin: 0 0 18px;
+    font-size: 24px;
+}
+
+.category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 14px;
+}
+
+.category-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.category-card:hover {
+    transform: translateY(-2px);
+    border-color: #aaa;
+}
+
+.category-card-name {
+    font-size: 21px;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 6px;
+}
+
+.category-card-count {
+    color: #666;
+    font-size: 15px;
+}
+
+.topic-detail {
+    display: none;
+}
+
+.topic-detail-header {
+    background: white;
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 14px;
+}
+
+.topic-detail-title {
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.topic-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+}
+
+.topic-actions button,
+.back-to-topics-btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 15px;
+}
+
+.topic-word-list .result-item {
+    margin: 10px 0;
+}
+
+.flashcard-category-row {
+    max-width: 420px;
+    margin: 0 auto 14px;
+    color: white;
+}
+
+.flashcard-category-row label {
+    display: block;
+    margin-bottom: 6px;
+    text-align: center;
+    font-weight: 600;
+}
+
 @media (max-width: 600px) {
     body {
         padding: 14px 10px;
@@ -359,6 +488,15 @@ h1 {
     .search-container {
         padding: 14px;
     }
+
+    .category-filter-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .category-grid {
+        grid-template-columns: 1fr;
+    }
 }
 </style>
 </head>
@@ -369,6 +507,7 @@ h1 {
 
 <div class="mode-buttons">
     <button id="dictionaryModeBtn">Dictionary</button>
+    <button id="browseModeBtn">Browse Topics</button>
     <button id="flashcardModeBtn">Flashcards</button>
 </div>
 
@@ -377,6 +516,13 @@ h1 {
         <input id="searchInput"
                placeholder="Type to search (Hanzi, Pinyin, or English)..."
                autocomplete="off">
+
+        <div class="category-filter-row">
+            <label for="categoryFilter">Topic</label>
+            <select id="categoryFilter">
+                <option value="">All Topics</option>
+            </select>
+        </div>
     </div>
 
     <div id="results">
@@ -384,8 +530,37 @@ h1 {
     </div>
 </div>
 
+<div id="browseSection" style="display:none;">
+    <div class="browse-wrapper">
+        <div id="categoryBrowseView">
+            <h2 class="browse-heading">Browse Topics</h2>
+            <div id="categoryGrid" class="category-grid"></div>
+        </div>
+
+        <div id="topicDetailView" class="topic-detail">
+            <button class="back-to-topics-btn" onclick="showCategoryGrid()">← All Topics</button>
+            <div class="topic-detail-header">
+                <div id="topicDetailTitle" class="topic-detail-title"></div>
+                <div id="topicDetailCount"></div>
+                <div class="topic-actions">
+                    <button onclick="filterDictionaryToCurrentTopic()">Search This Topic</button>
+                    <button onclick="studyCurrentTopic()">Study This Topic</button>
+                </div>
+            </div>
+            <div id="topicWordList" class="topic-word-list"></div>
+        </div>
+    </div>
+</div>
+
 <div id="flashcardSection" style="display:none;">
     <div class="flashcard-wrapper">
+
+        <div class="flashcard-category-row">
+            <label for="flashcardCategoryFilter">Study Topic</label>
+            <select id="flashcardCategoryFilter">
+                <option value="">All Topics</option>
+            </select>
+        </div>
 
         <div class="flashcard-controls">
             <button onclick="prevCard()">Previous</button>
@@ -460,6 +635,8 @@ let shown = false;
 let mode = "review";
 let srs = JSON.parse(localStorage.getItem("srs") || "{}");
 let aiSentences = JSON.parse(localStorage.getItem("aiSentences") || "{}");
+let currentTopic = "";
+let studyCategory = "";
 
 async function load() {
     const res = await fetch(SHEET_URL);
@@ -472,9 +649,12 @@ async function load() {
         hanzi: d.hanzi,
         pinyin: d.pinyin,
         english: d.english,
-        example: d.example || ""
+        example: d.example || "",
+        category: d.category || "Uncategorized"
     }));
 
+    populateCategoryControls();
+    renderCategoryGrid();
     buildSession();
     show(0);
 
@@ -483,38 +663,88 @@ async function load() {
 }
 
 function parseCSV(csv) {
-    const lines = csv.split("\n");
+    const rows = [];
+    let row = [];
+    let value = "";
+    let insideQuotes = false;
 
-    return lines.slice(1)
-        .filter(line => line.trim())
-        .map(line => {
-            const values = line.split(",").map(v => v.trim());
-            return {
-                hanzi: values[0] || "",
-                pinyin: values[1] || "",
-                english: values[2] || "",
-                example: values[3] || ""
-            };
-        });
+    for (let i = 0; i < csv.length; i++) {
+        const char = csv[i];
+        const next = csv[i + 1];
+
+        if (char === '"' && insideQuotes && next === '"') {
+            value += '"';
+            i++;
+        } else if (char === '"') {
+            insideQuotes = !insideQuotes;
+        } else if (char === ',' && !insideQuotes) {
+            row.push(value.trim());
+            value = "";
+        } else if ((char === '\n' || char === '\r') && !insideQuotes) {
+            if (char === '\r' && next === '\n') i++;
+            row.push(value.trim());
+            value = "";
+            if (row.some(cell => cell !== "")) rows.push(row);
+            row = [];
+        } else {
+            value += char;
+        }
+    }
+
+    if (value || row.length) {
+        row.push(value.trim());
+        if (row.some(cell => cell !== "")) rows.push(row);
+    }
+
+    if (!rows.length) return [];
+
+    const headers = rows[0].map(h => h.trim().toLowerCase());
+    const findColumn = (...names) => {
+        for (const name of names) {
+            const index = headers.indexOf(name);
+            if (index !== -1) return index;
+        }
+        return -1;
+    };
+
+    const hanziIndex = findColumn("hanzi", "chinese", "word");
+    const pinyinIndex = findColumn("pinyin");
+    const englishIndex = findColumn("english", "definition", "meaning");
+    const exampleIndex = findColumn("example", "example sentence");
+    const categoryIndex = findColumn("category", "topic");
+
+    return rows.slice(1).map(values => ({
+        hanzi: hanziIndex >= 0 ? values[hanziIndex] || "" : values[0] || "",
+        pinyin: pinyinIndex >= 0 ? values[pinyinIndex] || "" : values[1] || "",
+        english: englishIndex >= 0 ? values[englishIndex] || "" : values[2] || "",
+        example: exampleIndex >= 0 ? values[exampleIndex] || "" : values[3] || "",
+        category: categoryIndex >= 0 ? values[categoryIndex] || "Uncategorized" : values[4] || "Uncategorized"
+    })).filter(entry => entry.hanzi || entry.pinyin || entry.english);
 }
 
 function search(query) {
     query = query.toLowerCase().trim();
-    if (!query) return [];
+    const selectedCategory = document.getElementById("categoryFilter").value;
 
-    return dictionary.filter(entry =>
-        entry.hanzi.includes(query) ||
-        entry.pinyin.toLowerCase().includes(query) ||
-        entry.english.toLowerCase().includes(query)
-    );
+    return dictionary.filter(entry => {
+        const matchesCategory = !selectedCategory || entry.category === selectedCategory;
+        const matchesQuery = !query ||
+            entry.hanzi.includes(query) ||
+            entry.pinyin.toLowerCase().includes(query) ||
+            entry.english.toLowerCase().includes(query);
+
+        return matchesCategory && matchesQuery;
+    });
 }
 
 function displayResults(results) {
     const resultsDiv = document.getElementById("results");
     const currentQuery = document.getElementById("searchInput").value.trim();
 
-    if (!currentQuery) {
-        resultsDiv.innerHTML = '<div class="no-results">Start typing to search.</div>';
+    const selectedCategory = document.getElementById("categoryFilter").value;
+
+    if (!currentQuery && !selectedCategory) {
+        resultsDiv.innerHTML = '<div class="no-results">Start typing to search or select a topic.</div>';
         return;
     }
 
@@ -528,9 +758,101 @@ function displayResults(results) {
             <div class="hanzi">${entry.hanzi}</div>
             <div class="pinyin">${entry.pinyin}</div>
             <div class="english">${entry.english}</div>
+            <div class="category-badge">${escapeHTML(entry.category || "Uncategorized")}</div>
             ${entry.example ? `<div class="example">${entry.example}</div>` : ""}
         </div>
     `).join("");
+}
+
+function escapeHTML(value) {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+function getCategories() {
+    return [...new Set(dictionary.map(entry => entry.category || "Uncategorized"))]
+        .sort((a, b) => a.localeCompare(b));
+}
+
+function populateCategoryControls() {
+    const categories = getCategories();
+    const options = categories.map(category =>
+        `<option value="${escapeHTML(category)}">${escapeHTML(category)}</option>`
+    ).join("");
+
+    document.getElementById("categoryFilter").innerHTML =
+        '<option value="">All Topics</option>' + options;
+
+    document.getElementById("flashcardCategoryFilter").innerHTML =
+        '<option value="">All Topics</option>' + options;
+}
+
+function renderCategoryGrid() {
+    const counts = dictionary.reduce((map, entry) => {
+        const category = entry.category || "Uncategorized";
+        map[category] = (map[category] || 0) + 1;
+        return map;
+    }, {});
+
+    const categories = Object.keys(counts).sort((a, b) => a.localeCompare(b));
+    document.getElementById("categoryGrid").innerHTML = categories.map(category => `
+        <div class="category-card" onclick='openTopic(decodeURIComponent("${encodeURIComponent(category).replaceAll("'", "%27")}"))'>
+            <div class="category-card-name">${escapeHTML(category)}</div>
+            <div class="category-card-count">${counts[category]} ${counts[category] === 1 ? "word" : "words"}</div>
+        </div>
+    `).join("");
+}
+
+function openTopic(category) {
+    currentTopic = category;
+    const words = dictionary.filter(entry => (entry.category || "Uncategorized") === category);
+
+    document.getElementById("categoryBrowseView").style.display = "none";
+    document.getElementById("topicDetailView").style.display = "block";
+    document.getElementById("topicDetailTitle").innerText = category;
+    document.getElementById("topicDetailCount").innerText =
+        `${words.length} ${words.length === 1 ? "word" : "words"}`;
+
+    document.getElementById("topicWordList").innerHTML = words.map(entry => `
+        <div class="result-item">
+            <div class="hanzi">${escapeHTML(entry.hanzi)}</div>
+            <div class="pinyin">${escapeHTML(entry.pinyin)}</div>
+            <div class="english">${escapeHTML(entry.english)}</div>
+            ${entry.example ? `<div class="example">${escapeHTML(entry.example)}</div>` : ""}
+        </div>
+    `).join("");
+}
+
+function showCategoryGrid() {
+    currentTopic = "";
+    document.getElementById("categoryBrowseView").style.display = "block";
+    document.getElementById("topicDetailView").style.display = "none";
+}
+
+function filterDictionaryToCurrentTopic() {
+    if (!currentTopic) return;
+    showSection("dictionary");
+    document.getElementById("categoryFilter").value = currentTopic;
+    displayResults(search(document.getElementById("searchInput").value));
+}
+
+function studyCurrentTopic() {
+    if (!currentTopic) return;
+    studyCategory = currentTopic;
+    document.getElementById("flashcardCategoryFilter").value = currentTopic;
+    showSection("flashcards");
+    buildSession();
+    show(0);
+}
+
+function showSection(section) {
+    document.getElementById("dictionarySection").style.display = section === "dictionary" ? "block" : "none";
+    document.getElementById("browseSection").style.display = section === "browse" ? "block" : "none";
+    document.getElementById("flashcardSection").style.display = section === "flashcards" ? "block" : "none";
 }
 
 function today() {
@@ -541,7 +863,11 @@ function buildSession() {
     mode = "review";
     let t = today();
 
-    let review = allCards.filter(c => {
+    const eligibleCards = studyCategory
+        ? allCards.filter(c => c.category === studyCategory)
+        : allCards;
+
+    let review = eligibleCards.filter(c => {
         let d = srs[c.id];
         return d &&
                !d.suspended &&
@@ -550,7 +876,7 @@ function buildSession() {
                d.due <= t;
     });
 
-    let newCards = allCards.filter(c => {
+    let newCards = eligibleCards.filter(c => {
         let d = srs[c.id];
         return (!d || !d.due) &&
                (!d || !d.suspended) &&
@@ -577,8 +903,11 @@ function enterUnsuspendMode() {
 
 function updateStatus() {
     let t = today();
+    const statusCards = studyCategory
+        ? allCards.filter(c => c.category === studyCategory)
+        : allCards;
 
-    let due = allCards.filter(c => {
+    let due = statusCards.filter(c => {
         let d = srs[c.id];
         return d &&
                d.due <= t &&
@@ -586,11 +915,11 @@ function updateStatus() {
                (!d.buried || d.buried < t);
     }).length;
 
-    let newCount = allCards.filter(c => !srs[c.id]).length;
-    let suspended = allCards.filter(c => srs[c.id]?.suspended).length;
+    let newCount = statusCards.filter(c => !srs[c.id]).length;
+    let suspended = statusCards.filter(c => srs[c.id]?.suspended).length;
 
     document.getElementById("status").innerText =
-        `Mode: ${mode} | Due: ${due} | New: ${newCount} | Suspended: ${suspended} | Session: ${sessionCards.length}`;
+        `Mode: ${mode}${studyCategory ? ` | Topic: ${studyCategory}` : ""} | Due: ${due} | New: ${newCount} | Suspended: ${suspended} | Session: ${sessionCards.length}`;
 }
 
 function show(i) {
@@ -876,16 +1205,29 @@ document.getElementById("searchInput").addEventListener("input", e => {
 });
 
 document.getElementById("flashcardModeBtn").onclick = () => {
-    document.getElementById("dictionarySection").style.display = "none";
-    document.getElementById("flashcardSection").style.display = "block";
+    showSection("flashcards");
     buildSession();
     show(0);
 };
 
 document.getElementById("dictionaryModeBtn").onclick = () => {
-    document.getElementById("dictionarySection").style.display = "block";
-    document.getElementById("flashcardSection").style.display = "none";
+    showSection("dictionary");
 };
+
+document.getElementById("browseModeBtn").onclick = () => {
+    showSection("browse");
+    showCategoryGrid();
+};
+
+document.getElementById("categoryFilter").addEventListener("change", () => {
+    displayResults(search(document.getElementById("searchInput").value));
+});
+
+document.getElementById("flashcardCategoryFilter").addEventListener("change", e => {
+    studyCategory = e.target.value;
+    buildSession();
+    show(0);
+});
 
 document.addEventListener("keydown", e => {
     const flashcardVisible = document.getElementById("flashcardSection").style.display !== "none";
@@ -924,4 +1266,3 @@ load();
 </script>
 
 </body>
-</html>
